@@ -5,8 +5,10 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgtype"
 	"github.com/securemarket/backend/internal/database"
@@ -14,10 +16,14 @@ import (
 	"github.com/securemarket/backend/internal/models"
 )
 
-type ServiceHandler struct{}
+type ServiceHandler struct {
+	JWTSecret string
+}
 
-func NewServiceHandler() *ServiceHandler {
-	return &ServiceHandler{}
+func NewServiceHandler(jwtSecret string) *ServiceHandler {
+	return &ServiceHandler{
+		JWTSecret: jwtSecret,
+	}
 }
 
 func (h *ServiceHandler) Routes(r chi.Router) {
@@ -26,6 +32,28 @@ func (h *ServiceHandler) Routes(r chi.Router) {
 	r.Post("/", h.Create)
 	r.Put("/{id}", h.Update)
 	r.Delete("/{id}", h.Archive)
+}
+
+func (h *ServiceHandler) extractUserID(r *http.Request) string {
+	if id := middleware.GetUserID(r); id != "" {
+		return id
+	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return ""
+	}
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		return ""
+	}
+	claims := &middleware.Claims{}
+	token, err := jwt.ParseWithClaims(parts[1], claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(h.JWTSecret), nil
+	})
+	if err != nil || !token.Valid {
+		return ""
+	}
+	return claims.UserID
 }
 
 func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -53,17 +81,19 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	var total int
 	database.DB.QueryRow(r.Context(), query, args...).Scan(&total)
 
-	dataQuery := `SELECT id, provider_id, lock_address, network_id, title, description, category, price_usd, coverage_amount, coverage_details, duration_days, max_members, active_members, status, created_at, updated_at
-		FROM services WHERE status = 'active'`
+	dataQuery := `SELECT s.id, s.provider_id, COALESCE(p.business_name, 'Proveedor Autorizado') as provider_name, s.lock_address, s.network_id, s.title, s.description, s.category, s.price_usd, s.coverage_amount, s.coverage_details, s.duration_days, s.max_members, s.active_members, s.status, s.created_at, s.updated_at
+		FROM services s
+		LEFT JOIN providers p ON s.provider_id = p.id
+		WHERE s.status = 'active'`
 	dataArgs := make([]interface{}, len(args))
 	copy(dataArgs, args)
 
 	if category != "" {
-		dataQuery += ` AND category = $1`
+		dataQuery += ` AND s.category = $1`
 		dataArgs = []interface{}{category}
 	}
 
-	dataQuery += ` ORDER BY created_at DESC LIMIT $` + strconv.Itoa(argIdx) + ` OFFSET $` + strconv.Itoa(argIdx+1)
+	dataQuery += ` ORDER BY s.created_at DESC LIMIT $` + strconv.Itoa(argIdx) + ` OFFSET $` + strconv.Itoa(argIdx+1)
 	dataArgs = append(dataArgs, perPage, offset)
 
 	rows, err := database.DB.Query(r.Context(), dataQuery, dataArgs...)
@@ -76,7 +106,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	var services []models.Service
 	for rows.Next() {
 		var s models.Service
-		rows.Scan(&s.ID, &s.ProviderID, &s.LockAddress, &s.NetworkID, &s.Title,
+		rows.Scan(&s.ID, &s.ProviderID, &s.ProviderName, &s.LockAddress, &s.NetworkID, &s.Title,
 			&s.Description, &s.Category, &s.PriceUSD, &s.CoverageAmount,
 			&s.CoverageDetails, &s.DurationDays, &s.MaxMembers, &s.ActiveMembers,
 			&s.Status, &s.CreatedAt, &s.UpdatedAt)
@@ -97,9 +127,11 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	var s models.Service
 	err := database.DB.QueryRow(r.Context(),
-		`SELECT id, provider_id, lock_address, network_id, title, description, category, price_usd, coverage_amount, coverage_details, duration_days, max_members, active_members, status, created_at, updated_at
-		 FROM services WHERE id = $1`, id).Scan(
-		&s.ID, &s.ProviderID, &s.LockAddress, &s.NetworkID, &s.Title,
+		`SELECT s.id, s.provider_id, COALESCE(p.business_name, 'Proveedor Autorizado') as provider_name, s.lock_address, s.network_id, s.title, s.description, s.category, s.price_usd, s.coverage_amount, s.coverage_details, s.duration_days, s.max_members, s.active_members, s.status, s.created_at, s.updated_at
+		 FROM services s
+		 LEFT JOIN providers p ON s.provider_id = p.id
+		 WHERE s.id = $1`, id).Scan(
+		&s.ID, &s.ProviderID, &s.ProviderName, &s.LockAddress, &s.NetworkID, &s.Title,
 		&s.Description, &s.Category, &s.PriceUSD, &s.CoverageAmount,
 		&s.CoverageDetails, &s.DurationDays, &s.MaxMembers, &s.ActiveMembers,
 		&s.Status, &s.CreatedAt, &s.UpdatedAt)
@@ -112,7 +144,7 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
+	userID := h.extractUserID(r)
 	if userID == "" {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return
@@ -124,13 +156,17 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get provider ID
+	// Get or auto-create provider ID
 	var providerID string
 	err := database.DB.QueryRow(r.Context(),
 		`SELECT id FROM providers WHERE user_id = $1`, userID).Scan(&providerID)
 	if err != nil {
-		http.Error(w, `{"error":"provider profile not found"}`, http.StatusNotFound)
-		return
+		providerID = uuid.New().String()
+		database.DB.Exec(r.Context(),
+			`INSERT INTO providers (id, user_id, business_name, category, description, rating, verified, created_at)
+			 VALUES ($1, $2, $3, $4, $5, 5.0, true, NOW())`,
+			providerID, userID, "Mi Negocio / Consultorio", req.Category, "Proveedor verificado con garantías blockchain.")
+		database.DB.Exec(r.Context(), `UPDATE users SET role = 'provider' WHERE id = $1`, userID)
 	}
 
 	id := uuid.New().String()
@@ -144,15 +180,17 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		id, providerID, req.Title, req.Description, req.Category,
 		req.PriceUSD, req.CoverageAmount, jsonb, req.DurationDays, req.MaxMembers)
 	if err != nil {
-		http.Error(w, `{"error":"failed to create service"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"failed to create service: `+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
 	var s models.Service
 	database.DB.QueryRow(r.Context(),
-		`SELECT id, provider_id, lock_address, network_id, title, description, category, price_usd, coverage_amount, coverage_details, duration_days, max_members, active_members, status, created_at, updated_at
-		 FROM services WHERE id = $1`, id).Scan(
-		&s.ID, &s.ProviderID, &s.LockAddress, &s.NetworkID, &s.Title,
+		`SELECT s.id, s.provider_id, COALESCE(p.business_name, 'Proveedor Autorizado') as provider_name, s.lock_address, s.network_id, s.title, s.description, s.category, s.price_usd, s.coverage_amount, s.coverage_details, s.duration_days, s.max_members, s.active_members, s.status, s.created_at, s.updated_at
+		 FROM services s
+		 LEFT JOIN providers p ON s.provider_id = p.id
+		 WHERE s.id = $1`, id).Scan(
+		&s.ID, &s.ProviderID, &s.ProviderName, &s.LockAddress, &s.NetworkID, &s.Title,
 		&s.Description, &s.Category, &s.PriceUSD, &s.CoverageAmount,
 		&s.CoverageDetails, &s.DurationDays, &s.MaxMembers, &s.ActiveMembers,
 		&s.Status, &s.CreatedAt, &s.UpdatedAt)
@@ -162,7 +200,12 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
+	userID := h.extractUserID(r)
+	if userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	serviceID := chi.URLParam(r, "id")
 
 	// Verify ownership
@@ -198,7 +241,12 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServiceHandler) Archive(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
+	userID := h.extractUserID(r)
+	if userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	serviceID := chi.URLParam(r, "id")
 
 	var ownerID string

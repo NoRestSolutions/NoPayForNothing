@@ -1,51 +1,84 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, ArrowRight, CheckCircle, Shield, Lock, ExternalLink, AlertCircle } from 'lucide-react';
+import { 
+  Wallet, ArrowRight, CheckCircle, Shield, 
+  Lock, ExternalLink, AlertCircle, Briefcase, UserCheck
+} from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
 const steps = [
-  { label: 'Connect', icon: Wallet },
-  { label: 'Sign', icon: Lock },
-  { label: 'Verified', icon: CheckCircle },
+  { label: 'Conectar', icon: Wallet },
+  { label: 'Firmar', icon: Lock },
+  { label: 'Elegir Rol', icon: UserCheck },
+  { label: 'Listo', icon: CheckCircle },
 ];
 
 const wallets = [
-  { name: 'MetaMask', icon: '🦊', description: 'Popular browser extension wallet' },
-  { name: 'Coinbase Wallet', icon: '🔵', description: 'Coinbase self-custody wallet' },
-  { name: 'WalletConnect', icon: '🔗', description: 'Scan QR code with any wallet' },
+  {
+    id: 'metamask',
+    name: 'MetaMask',
+    icon: '🦊',
+    description: 'Extensión popular para navegadores y móviles',
+  },
+  {
+    id: 'coinbase',
+    name: 'Coinbase Wallet',
+    icon: '🔵',
+    description: 'Billetera de autocustodia y Passkeys',
+  },
+  {
+    id: 'walletconnect',
+    name: 'WalletConnect / Móvil',
+    icon: '🔗',
+    description: 'Conecta cualquier billetera escaneando código QR',
+  },
 ];
 
 export default function WalletConnect() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(0);
+  const { walletAddress, role, signIn, updateRole, signOut } = useAuth();
+  const [step, setStep] = useState(walletAddress ? 2 : 0);
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isSigning, setIsSigning] = useState(false);
+  const [chosenRole, setChosenRole] = useState<'customer' | 'provider'>(role || 'customer');
 
-  useEffect(() => {
-    const stored = localStorage.getItem('wallet_address');
-    if (stored) {
-      setWalletAddress(stored);
-      setStep(2);
-    }
-  }, []);
-
-  const handleSelectWallet = async (walletName: string) => {
-    setSelectedWallet(walletName);
+  const handleSelectWallet = async (wallet: typeof wallets[0]) => {
+    setSelectedWallet(wallet.name);
     setStep(1);
     setError(null);
+    setIsSigning(true);
 
     try {
-      await new Promise(r => setTimeout(r, 1500));
-      const mockAddress = '0x' + Array.from({ length: 40 }, () => 
-        Math.floor(Math.random() * 16).toString(16)
-      ).join('');
-      
-      setWalletAddress(mockAddress);
-      localStorage.setItem('wallet_address', mockAddress);
+      await signIn();
+      // After signature, show role selection step
       setStep(2);
-    } catch (err) {
-      setError('Failed to connect wallet. Please try again.');
+    } catch (err: any) {
+      console.error('Wallet connection error:', err);
+      let errorMsg = 'Error al conectar la billetera. Por favor intenta de nuevo.';
+      if (err.message) {
+        if (err.message.includes('User rejected') || err.message.includes('rejected')) {
+          errorMsg = 'Firma rechazada por el usuario en la billetera.';
+        } else if (err.message.includes('No se detectó')) {
+          errorMsg = 'No se encontró la extensión MetaMask o billetera Web3 instalada.';
+        } else {
+          errorMsg = err.message;
+        }
+      }
+      setError(errorMsg);
       setStep(0);
+    } finally {
+      setIsSigning(false);
+    }
+  };
+
+  const handleConfirmRole = async () => {
+    try {
+      await updateRole(chosenRole);
+      setStep(3);
+    } catch (err) {
+      console.error('Failed to update role:', err);
+      setStep(3);
     }
   };
 
@@ -53,16 +86,17 @@ export default function WalletConnect() {
     navigate('/dashboard');
   };
 
-  if (walletAddress) {
+  // Paso 3: Completado / Conectado
+  if (step === 3 && walletAddress) {
     return (
       <div className="auth-container">
         <div className="auth-card">
-          <div className="auth-logo" style={{ background: '#00b35e' }}>
+          <div className="auth-logo" style={{ background: chosenRole === 'provider' ? '#16a34a' : '#2563eb' }}>
             <CheckCircle size={28} color="white" />
           </div>
-          <h1 className="auth-title">Wallet Connected!</h1>
+          <h1 className="auth-title">¡Sesión Iniciada!</h1>
           <p className="auth-subtitle">
-            Your wallet is connected and ready to use.
+            Ingresando como <strong>{chosenRole === 'provider' ? '🩺 Proveedor / Vendedor' : '🛡️ Cliente / Paciente'}</strong>
           </p>
           
           <div style={{
@@ -73,7 +107,7 @@ export default function WalletConnect() {
             textAlign: 'left',
           }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>
-              Connected Address
+              Dirección Autenticada
             </div>
             <div style={{ 
               fontFamily: 'monospace', 
@@ -84,27 +118,116 @@ export default function WalletConnect() {
               gap: 8,
             }}>
               {walletAddress.slice(0, 10)}...{walletAddress.slice(-8)}
-              <ExternalLink size={14} color="var(--text-muted)" />
+              <a 
+                href={`https://polygonscan.com/address/${walletAddress}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', color: 'inherit' }}
+              >
+                <ExternalLink size={14} color="var(--text-muted)" />
+              </a>
             </div>
           </div>
 
-          <button className="auth-btn" onClick={handleContinue}>
-            Go to Dashboard <ArrowRight size={18} />
+          <button className="auth-btn" onClick={handleContinue} style={{ background: chosenRole === 'provider' ? '#16a34a' : 'var(--primary)' }}>
+            Entrar a Mi Dashboard <ArrowRight size={18} />
           </button>
           
           <p className="auth-footer" style={{ marginTop: 16 }}>
             <a href="#" onClick={(e) => {
               e.preventDefault();
-              localStorage.removeItem('wallet_address');
-              setWalletAddress(null);
+              signOut();
               setStep(0);
-            }}>Disconnect Wallet</a>
+            }}>Cerrar Sesión</a>
           </p>
         </div>
       </div>
     );
   }
 
+  // Paso 2: Selección de Rol
+  if (step === 2 && walletAddress) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card" style={{ maxWidth: 520 }}>
+          <div className="auth-logo" style={{ background: 'var(--primary)' }}>
+            <UserCheck size={28} color="white" />
+          </div>
+
+          <h1 className="auth-title">¿Cómo deseas ingresar?</h1>
+          <p className="auth-subtitle">
+            Selecciona el tipo de cuenta con el que deseas acceder a NoPayForNothing.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, margin: '24px 0' }}>
+            {/* Opción Cliente */}
+            <div
+              onClick={() => setChosenRole('customer')}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 16,
+                padding: '18px 20px',
+                borderRadius: 14,
+                border: chosenRole === 'customer' ? '2px solid #2563eb' : '1px solid var(--border)',
+                background: chosenRole === 'customer' ? 'rgba(37, 99, 235, 0.06)' : 'var(--bg-primary)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.2s',
+              }}
+            >
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Shield size={24} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: '1.0625rem', color: chosenRole === 'customer' ? '#2563eb' : 'inherit' }}>
+                  Soy Cliente / Paciente
+                </div>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
+                  Quiero contratar garantías de servicios (mecánicos, doctores, dentistas, etc.), gestionar mis suscripciones y radicar reclamos.
+                </div>
+              </div>
+            </div>
+
+            {/* Opción Proveedor */}
+            <div
+              onClick={() => setChosenRole('provider')}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 16,
+                padding: '18px 20px',
+                borderRadius: 14,
+                border: chosenRole === 'provider' ? '2px solid #16a34a' : '1px solid var(--border)',
+                background: chosenRole === 'provider' ? 'rgba(22, 163, 74, 0.06)' : 'var(--bg-primary)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.2s',
+              }}
+            >
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(22, 163, 74, 0.1)', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Briefcase size={24} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: '1.0625rem', color: chosenRole === 'provider' ? '#16a34a' : 'inherit' }}>
+                  Soy Proveedor / Vendedor de Servicios
+                </div>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
+                  Soy doctor, mecánico, dentista o profesional. Quiero ofrecer garantías, crear planes de servicio y gestionar a mis pacientes/clientes.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button className="auth-btn" onClick={handleConfirmRole} style={{ background: chosenRole === 'provider' ? '#16a34a' : 'var(--primary)' }}>
+            Continuar como {chosenRole === 'provider' ? 'Proveedor' : 'Cliente'} <ArrowRight size={18} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Pasos 0 y 1: Selección de Wallet y Firma
   return (
     <div className="auth-container">
       <div className="auth-card">
@@ -118,7 +241,7 @@ export default function WalletConnect() {
               key={i}
               className="step-dot"
               style={{
-                width: step === i ? 32 : 8,
+                width: step === i ? 28 : 8,
                 background: i <= step ? 'var(--primary)' : 'var(--border)',
               }}
             />
@@ -126,15 +249,13 @@ export default function WalletConnect() {
         </div>
 
         <h1 className="auth-title">
-          {step === 0 && 'Connect Wallet'}
-          {step === 1 && 'Connecting...'}
-          {step === 2 && 'Connected!'}
+          {step === 0 && 'Conectar Billetera'}
+          {step === 1 && 'Conectando y Firmando...'}
         </h1>
         
         <p className="auth-subtitle">
-          {step === 0 && 'Choose your preferred wallet to connect to NoPayForNothing'}
-          {step === 1 && `Connecting to ${selectedWallet}...`}
-          {step === 2 && 'Your wallet is connected'}
+          {step === 0 && 'Elige tu billetera para acceder a tus garantías en NoPayForNothing'}
+          {step === 1 && `Por favor aprueba la firma de autenticación (SIWE) en ${selectedWallet}...`}
         </p>
 
         {error && (
@@ -148,9 +269,10 @@ export default function WalletConnect() {
             marginBottom: 16,
             color: '#f54242',
             fontSize: '0.875rem',
+            textAlign: 'left',
           }}>
-            <AlertCircle size={16} />
-            {error}
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span>{error}</span>
           </div>
         )}
 
@@ -158,8 +280,9 @@ export default function WalletConnect() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {wallets.map((wallet) => (
               <button
-                key={wallet.name}
-                onClick={() => handleSelectWallet(wallet.name)}
+                key={wallet.id}
+                onClick={() => handleSelectWallet(wallet)}
+                disabled={isSigning}
                 className="auth-btn"
                 style={{
                   background: 'var(--bg-primary)',
@@ -167,6 +290,7 @@ export default function WalletConnect() {
                   border: '1px solid var(--border)',
                   justifyContent: 'flex-start',
                   padding: '16px 20px',
+                  cursor: 'pointer',
                 }}
               >
                 <span style={{ fontSize: '1.5rem' }}>{wallet.icon}</span>
@@ -187,6 +311,7 @@ export default function WalletConnect() {
             flexDirection: 'column', 
             alignItems: 'center',
             gap: 16,
+            padding: '24px 0',
           }}>
             <div className="animate-spin" style={{
               width: 48,
@@ -196,20 +321,19 @@ export default function WalletConnect() {
               borderRadius: '50%',
             }} />
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-              Please approve in your wallet...
+              Firma el mensaje criptográfico en tu billetera para verificar tu identidad...
             </p>
           </div>
         )}
 
         <div className="auth-note">
-          <strong>Note:</strong> NoPayForNothing never stores your private keys. 
-          All transactions are signed locally in your wallet.
+          <strong>Seguridad:</strong> NoPayForNothing nunca solicita ni almacena tus claves privadas.
         </div>
 
         <p className="auth-footer">
-          New to Ethereum?{' '}
+          ¿Nuevo en Web3?{' '}
           <a href="https://metamask.io" target="_blank" rel="noopener noreferrer">
-            Learn more about wallets
+            Descargar MetaMask
           </a>
         </p>
       </div>

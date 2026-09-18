@@ -32,6 +32,7 @@ type Provider struct {
 type Service struct {
 	ID              string         `json:"id" db:"id"`
 	ProviderID      string         `json:"provider_id" db:"provider_id"`
+	ProviderName    string         `json:"provider_name,omitempty" db:"provider_name"`
 	LockAddress     *string        `json:"lock_address,omitempty" db:"lock_address"`
 	NetworkID       int            `json:"network_id" db:"network_id"`
 	Title           string         `json:"title" db:"title"`
@@ -49,30 +50,38 @@ type Service struct {
 }
 
 type Contract struct {
-	ID             string         `json:"id" db:"id"`
-	ServiceID      string         `json:"service_id" db:"service_id"`
-	CustomerID     string         `json:"customer_id" db:"customer_id"`
-	ProviderID     string         `json:"provider_id" db:"provider_id"`
-	KeyID          *string        `json:"key_id,omitempty" db:"key_id"`
-	LockAddress    *string        `json:"lock_address,omitempty" db:"lock_address"`
-	Status         string         `json:"status" db:"status"`
-	Terms          pgtype.JSONB   `json:"terms" db:"terms"`
-	SignedAt       *time.Time     `json:"signed_at,omitempty" db:"signed_at"`
-	ExpiresAt      *time.Time     `json:"expires_at,omitempty" db:"expires_at"`
-	BlockchainTx   *string        `json:"blockchain_tx_hash,omitempty" db:"blockchain_tx_hash"`
-	CreatedAt      time.Time      `json:"created_at" db:"created_at"`
+	ID              string         `json:"id" db:"id"`
+	ServiceID       string         `json:"service_id" db:"service_id"`
+	CustomerID      string         `json:"customer_id" db:"customer_id"`
+	ProviderID      string         `json:"provider_id" db:"provider_id"`
+	ServiceTitle    string         `json:"service_title,omitempty" db:"service_title"`
+	ProviderName    string         `json:"provider_name,omitempty" db:"provider_name"`
+	CustomerAddress string         `json:"customer_address,omitempty" db:"customer_address"`
+	PriceUSD        float64        `json:"price_usd,omitempty" db:"price_usd"`
+	CoverageAmount  float64        `json:"coverage_amount,omitempty" db:"coverage_amount"`
+	KeyID           *string        `json:"key_id,omitempty" db:"key_id"`
+	LockAddress     *string        `json:"lock_address,omitempty" db:"lock_address"`
+	Status          string         `json:"status" db:"status"`
+	Terms           pgtype.JSONB   `json:"terms" db:"terms"`
+	SignedAt        *time.Time     `json:"signed_at,omitempty" db:"signed_at"`
+	ExpiresAt       *time.Time     `json:"expires_at,omitempty" db:"expires_at"`
+	BlockchainTx    *string        `json:"blockchain_tx_hash,omitempty" db:"blockchain_tx_hash"`
+	CreatedAt       time.Time      `json:"created_at" db:"created_at"`
 }
 
 type Claim struct {
-	ID            string         `json:"id" db:"id"`
-	ContractID    string         `json:"contract_id" db:"contract_id"`
-	Amount        float64        `json:"amount" db:"amount"`
-	Description   string         `json:"description" db:"description"`
-	Status        string         `json:"status" db:"status"`
-	EvidenceUrls  pgtype.TextArray `json:"evidence_urls" db:"evidence_urls"`
-	ResolvedAt    *time.Time     `json:"resolved_at,omitempty" db:"resolved_at"`
-	PayoutTxHash  *string        `json:"payout_tx_hash,omitempty" db:"payout_tx_hash"`
-	CreatedAt     time.Time      `json:"created_at" db:"created_at"`
+	ID              string           `json:"id" db:"id"`
+	ContractID      string           `json:"contract_id" db:"contract_id"`
+	ServiceTitle    string           `json:"service_title,omitempty" db:"service_title"`
+	ProviderName    string           `json:"provider_name,omitempty" db:"provider_name"`
+	CustomerAddress string           `json:"customer_address,omitempty" db:"customer_address"`
+	Amount          float64          `json:"amount" db:"amount"`
+	Description     string           `json:"description" db:"description"`
+	Status          string           `json:"status" db:"status"`
+	EvidenceUrls    pgtype.TextArray `json:"evidence_urls" db:"evidence_urls"`
+	ResolvedAt      *time.Time       `json:"resolved_at,omitempty" db:"resolved_at"`
+	PayoutTxHash    *string          `json:"payout_tx_hash,omitempty" db:"payout_tx_hash"`
+	CreatedAt       time.Time        `json:"created_at" db:"created_at"`
 }
 
 type Subscription struct {

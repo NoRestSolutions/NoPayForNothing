@@ -51,6 +51,11 @@ class ApiClient {
     return response.json();
   }
 
+  async getNonce(address?: string) {
+    const params = address ? `?address=${encodeURIComponent(address)}` : '';
+    return this.request<{ nonce: string }>(`/api/v1/auth/nonce${params}`);
+  }
+
   async signInWithEthereum(message: string, signature: string) {
     return this.request<{ token: string; user: any }>('/api/v1/auth/siwe', {
       method: 'POST',
@@ -60,6 +65,13 @@ class ApiClient {
 
   async getMe() {
     return this.request<any>('/api/v1/auth/me');
+  }
+
+  async updateRole(role: 'customer' | 'provider') {
+    return this.request<any>('/api/v1/auth/role', {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
   }
 
   async getProviders(page = 1, perPage = 20, category?: string) {

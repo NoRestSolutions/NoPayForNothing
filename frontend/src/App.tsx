@@ -1,24 +1,27 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AuthProvider } from './context/AuthContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import Landing from './pages/Landing';
 import Services from './pages/Services';
 import ServiceDetail from './pages/ServiceDetail';
 import Dashboard from './pages/Dashboard';
+import CustomerDashboard from './pages/CustomerDashboard';
+import ProviderDashboard from './pages/ProviderDashboard';
 import WalletConnect from './components/auth/WalletConnect';
 import './index.css';
 
 const pageVariants = {
-  initial: { opacity: 0, y: 20 },
+  initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -20 },
+  exit: { opacity: 0, y: -16 },
 };
 
 const pageTransition = {
   type: 'tween' as const,
   ease: 'anticipate' as const,
-  duration: 0.4,
+  duration: 0.3,
 };
 
 function AnimatedRoutes() {
@@ -39,6 +42,8 @@ function AnimatedRoutes() {
           <Route path="/services" element={<Services />} />
           <Route path="/services/:id" element={<ServiceDetail />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/customer" element={<CustomerDashboard />} />
+          <Route path="/dashboard/provider" element={<ProviderDashboard />} />
           <Route path="/wallet-connect" element={<WalletConnect />} />
         </Routes>
       </motion.div>
@@ -48,15 +53,17 @@ function AnimatedRoutes() {
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1">
-          <AnimatedRoutes />
-        </main>
-        <Footer />
-      </div>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen flex flex-col">
+          <Header />
+          <main className="flex-1">
+            <AnimatedRoutes />
+          </main>
+          <Footer />
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 

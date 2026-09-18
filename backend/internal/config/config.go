@@ -20,7 +20,7 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		ServerPort:   getEnv("SERVER_PORT", "8080"),
-		DatabaseURL:  getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/securemarket?sslmode=disable"),
+		DatabaseURL:  getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/nopayfornothing?sslmode=disable"),
 		JWTSecret:    getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 		UnlockAppURL: getEnv("UNLOCK_APP_URL", "https://app.unlock-protocol.com"),
 		LocksmithURL: getEnv("LOCKSMITH_URL", "https://locksmith.unlock-protocol.com"),

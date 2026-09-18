@@ -39,17 +39,30 @@ func (h *ClaimHandler) List(w http.ResponseWriter, r *http.Request) {
 	var args []interface{}
 
 	if role == "provider" {
-		query = `SELECT cl.id, cl.contract_id, cl.amount, cl.description, cl.status, cl.evidence_urls, cl.resolved_at, cl.payout_tx_hash, cl.created_at
+		query = `SELECT cl.id, cl.contract_id, 
+				COALESCE(s.title, 'Garantía') as service_title,
+				COALESCE(p.business_name, 'Proveedor') as provider_name,
+				COALESCE(u.wallet_address, '') as customer_address,
+				cl.amount, cl.description, cl.status, cl.evidence_urls, cl.resolved_at, cl.payout_tx_hash, cl.created_at
 			FROM claims cl
 			JOIN contracts c ON cl.contract_id = c.id
 			JOIN providers p ON c.provider_id = p.id
+			LEFT JOIN services s ON c.service_id = s.id
+			LEFT JOIN users u ON c.customer_id = u.id
 			WHERE p.user_id = $1
 			ORDER BY cl.created_at DESC`
 		args = []interface{}{userID}
 	} else {
-		query = `SELECT cl.id, cl.contract_id, cl.amount, cl.description, cl.status, cl.evidence_urls, cl.resolved_at, cl.payout_tx_hash, cl.created_at
+		query = `SELECT cl.id, cl.contract_id, 
+				COALESCE(s.title, 'Garantía') as service_title,
+				COALESCE(p.business_name, 'Proveedor') as provider_name,
+				COALESCE(u.wallet_address, '') as customer_address,
+				cl.amount, cl.description, cl.status, cl.evidence_urls, cl.resolved_at, cl.payout_tx_hash, cl.created_at
 			FROM claims cl
 			JOIN contracts c ON cl.contract_id = c.id
+			LEFT JOIN services s ON c.service_id = s.id
+			LEFT JOIN providers p ON c.provider_id = p.id
+			LEFT JOIN users u ON c.customer_id = u.id
 			WHERE c.customer_id = $1
 			ORDER BY cl.created_at DESC`
 		args = []interface{}{userID}
@@ -57,7 +70,7 @@ func (h *ClaimHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := database.DB.Query(r.Context(), query, args...)
 	if err != nil {
-		http.Error(w, `{"error":"failed to fetch claims"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"failed to fetch claims: `+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -65,9 +78,11 @@ func (h *ClaimHandler) List(w http.ResponseWriter, r *http.Request) {
 	var claims []models.Claim
 	for rows.Next() {
 		var cl models.Claim
-		rows.Scan(&cl.ID, &cl.ContractID, &cl.Amount, &cl.Description,
-			&cl.Status, &cl.EvidenceUrls, &cl.ResolvedAt, &cl.PayoutTxHash, &cl.CreatedAt)
-		claims = append(claims, cl)
+		err := rows.Scan(&cl.ID, &cl.ContractID, &cl.ServiceTitle, &cl.ProviderName, &cl.CustomerAddress,
+			&cl.Amount, &cl.Description, &cl.Status, &cl.EvidenceUrls, &cl.ResolvedAt, &cl.PayoutTxHash, &cl.CreatedAt)
+		if err == nil {
+			claims = append(claims, cl)
+		}
 	}
 
 	json.NewEncoder(w).Encode(claims)
@@ -105,7 +120,7 @@ func (h *ClaimHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Amount > coverageAmount {
-		http.Error(w, `{"error":"claim amount exceeds coverage"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"claim amount exceeds coverage limit"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -114,11 +129,11 @@ func (h *ClaimHandler) Create(w http.ResponseWriter, r *http.Request) {
 	evidenceArray.Set(req.EvidenceUrls)
 
 	_, err = database.DB.Exec(r.Context(),
-		`INSERT INTO claims (id, contract_id, amount, description, evidence_urls)
-		 VALUES ($1, $2, $3, $4, $5)`,
+		`INSERT INTO claims (id, contract_id, amount, description, status, evidence_urls, created_at)
+		 VALUES ($1, $2, $3, $4, 'pending', $5, NOW())`,
 		id, contractID, req.Amount, req.Description, evidenceArray)
 	if err != nil {
-		http.Error(w, `{"error":"failed to create claim"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"failed to create claim: `+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -128,10 +143,19 @@ func (h *ClaimHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var cl models.Claim
 	database.DB.QueryRow(r.Context(),
-		`SELECT id, contract_id, amount, description, status, evidence_urls, resolved_at, payout_tx_hash, created_at
-		 FROM claims WHERE id = $1`, id).Scan(
-		&cl.ID, &cl.ContractID, &cl.Amount, &cl.Description,
-		&cl.Status, &cl.EvidenceUrls, &cl.ResolvedAt, &cl.PayoutTxHash, &cl.CreatedAt)
+		`SELECT cl.id, cl.contract_id, 
+				COALESCE(s.title, 'Garantía') as service_title,
+				COALESCE(p.business_name, 'Proveedor') as provider_name,
+				COALESCE(u.wallet_address, '') as customer_address,
+				cl.amount, cl.description, cl.status, cl.evidence_urls, cl.resolved_at, cl.payout_tx_hash, cl.created_at
+		 FROM claims cl
+		 JOIN contracts c ON cl.contract_id = c.id
+		 LEFT JOIN services s ON c.service_id = s.id
+		 LEFT JOIN providers p ON c.provider_id = p.id
+		 LEFT JOIN users u ON c.customer_id = u.id
+		 WHERE cl.id = $1`, id).Scan(
+		&cl.ID, &cl.ContractID, &cl.ServiceTitle, &cl.ProviderName, &cl.CustomerAddress,
+		&cl.Amount, &cl.Description, &cl.Status, &cl.EvidenceUrls, &cl.ResolvedAt, &cl.PayoutTxHash, &cl.CreatedAt)
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(cl)

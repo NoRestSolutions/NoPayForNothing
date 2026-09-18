@@ -5,18 +5,24 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/securemarket/backend/internal/database"
 	"github.com/securemarket/backend/internal/middleware"
 	"github.com/securemarket/backend/internal/models"
 )
 
-type ProviderHandler struct{}
+type ProviderHandler struct {
+	JWTSecret string
+}
 
-func NewProviderHandler() *ProviderHandler {
-	return &ProviderHandler{}
+func NewProviderHandler(jwtSecret string) *ProviderHandler {
+	return &ProviderHandler{
+		JWTSecret: jwtSecret,
+	}
 }
 
 func (h *ProviderHandler) Routes(r chi.Router) {
@@ -24,6 +30,28 @@ func (h *ProviderHandler) Routes(r chi.Router) {
 	r.Get("/{id}", h.Get)
 	r.Post("/", h.Create)
 	r.Put("/{id}", h.Update)
+}
+
+func (h *ProviderHandler) extractUserID(r *http.Request) string {
+	if id := middleware.GetUserID(r); id != "" {
+		return id
+	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return ""
+	}
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		return ""
+	}
+	claims := &middleware.Claims{}
+	token, err := jwt.ParseWithClaims(parts[1], claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(h.JWTSecret), nil
+	})
+	if err != nil || !token.Valid {
+		return ""
+	}
+	return claims.UserID
 }
 
 func (h *ProviderHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +113,7 @@ func (h *ProviderHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
+	userID := h.extractUserID(r)
 	if userID == "" {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return
@@ -112,11 +140,11 @@ func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	id := uuid.New().String()
 	_, err := database.DB.Exec(r.Context(),
-		`INSERT INTO providers (id, user_id, business_name, category, description)
-		 VALUES ($1, $2, $3, $4, $5)`,
+		`INSERT INTO providers (id, user_id, business_name, category, description, rating, verified, created_at)
+		 VALUES ($1, $2, $3, $4, $5, 5.0, true, NOW())`,
 		id, userID, req.BusinessName, req.Category, req.Description)
 	if err != nil {
-		http.Error(w, `{"error":"failed to create provider"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"failed to create provider: `+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -136,7 +164,12 @@ func (h *ProviderHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProviderHandler) Update(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
+	userID := h.extractUserID(r)
+	if userID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	providerID := chi.URLParam(r, "id")
 
 	// Verify ownership

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/joho/godotenv"
 	"github.com/securemarket/backend/internal/config"
 	"github.com/securemarket/backend/internal/database"
 	"github.com/securemarket/backend/internal/handlers"
@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+	godotenv.Load()
 	cfg := config.Load()
 
 	// Initialize database
@@ -22,17 +23,15 @@ func main() {
 	}
 	defer database.Close()
 
-	// Run migrations if flag is set
-	if os.Getenv("RUN_MIGRATIONS") == "true" {
-		if err := database.RunMigrations(); err != nil {
-			log.Printf("Warning: migrations failed: %v", err)
-		}
+	// Run migrations and seed data on startup
+	if err := database.RunMigrations(); err != nil {
+		log.Printf("Notice on database migration: %v", err)
 	}
 
-	// Initialize handlers
+	// Initialize handlers with JWT Secret
 	authHandler := handlers.NewAuthHandler(cfg.JWTSecret, cfg.FrontendURL)
-	providerHandler := handlers.NewProviderHandler()
-	serviceHandler := handlers.NewServiceHandler()
+	providerHandler := handlers.NewProviderHandler(cfg.JWTSecret)
+	serviceHandler := handlers.NewServiceHandler(cfg.JWTSecret)
 	contractHandler := handlers.NewContractHandler()
 	claimHandler := handlers.NewClaimHandler()
 	webhookHandler := handlers.NewWebhookHandler()
@@ -40,17 +39,17 @@ func main() {
 	// Setup router
 	r := chi.NewRouter()
 
-	// Middleware
+	// Global CORS Middleware
 	r.Use(middleware.CORSMiddleware(cfg.FrontendURL))
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// Public routes
+		// Public & self-authenticating routes
 		r.Route("/auth", authHandler.Routes)
 		r.Route("/providers", providerHandler.Routes)
 		r.Route("/services", serviceHandler.Routes)
 
-		// Webhook routes (no auth required)
+		// Webhook routes
 		r.Route("/webhooks", webhookHandler.Routes)
 
 		// Protected routes
