@@ -141,3 +141,29 @@ type PaginatedResponse struct {
 	PerPage    int         `json:"per_page"`
 	TotalPages int         `json:"total_pages"`
 }
+
+type LockDetails struct {
+	Address            string `json:"address"`
+	Name               string `json:"name"`
+	TokenAddress       string `json:"tokenAddress"`
+	TotalKeys          int    `json:"totalKeys"`
+	OutstandingKeys    int    `json:"outstandingKeys"`
+	MaxNumberOfKeys    int    `json:"maxNumberOfKeys"`
+	ExpirationDuration int    `json:"expirationDuration"`
+	KeyPrice           string `json:"keyPrice"`
+	Balance            string `json:"balance"`
+	CreatedBlockNumber int    `json:"createdBlockNumber"`
+}
+
+type KeyHolder struct {
+	ID         string `json:"id"`
+	Lock       string `json:"lock"`
+	Owner      string `json:"owner"`
+	Expiration int64  `json:"expiration"`
+	TokenID    string `json:"tokenID"`
+}
+
+type LinkLockRequest struct {
+	LockAddress string `json:"lock_address"`
+	NetworkID   int    `json:"network_id"`
+}

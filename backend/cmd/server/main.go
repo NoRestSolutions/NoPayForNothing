@@ -35,6 +35,7 @@ func main() {
 	contractHandler := handlers.NewContractHandler()
 	claimHandler := handlers.NewClaimHandler()
 	webhookHandler := handlers.NewWebhookHandler()
+	lockHandler := handlers.NewLockHandler(cfg.SubgraphEndpoint, cfg.JWTSecret)
 
 	// Setup router
 	r := chi.NewRouter()
@@ -48,6 +49,7 @@ func main() {
 		r.Route("/auth", authHandler.Routes)
 		r.Route("/providers", providerHandler.Routes)
 		r.Route("/services", serviceHandler.Routes)
+		r.Route("/locks", lockHandler.Routes)
 
 		// Webhook routes
 		r.Route("/webhooks", webhookHandler.Routes)
