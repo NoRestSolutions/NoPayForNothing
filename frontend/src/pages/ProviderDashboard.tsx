@@ -4,8 +4,9 @@ import {
   Users, TrendingUp, AlertTriangle, 
   CheckCircle, Plus, Briefcase, 
   Wallet, Shield, X, RefreshCw,
-  ExternalLink, Clock
+  ExternalLink, Clock, Lock
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { categories } from '../config/config';
@@ -48,6 +49,7 @@ interface ClaimItem {
 }
 
 export default function ProviderDashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { walletAddress, updateRole } = useAuth();
   const [patients, setPatients] = useState<PatientContract[]>([]);
@@ -102,7 +104,7 @@ export default function ProviderDashboard() {
     const coverageNum = parseFloat(coverage);
 
     if (!title.trim() || isNaN(priceNum) || isNaN(coverageNum) || !description.trim()) {
-      setCreateError('Por favor completa todos los campos requeridos.');
+      setCreateError(t('providerDashboard.errorFieldsRequired'));
       return;
     }
 
@@ -119,9 +121,9 @@ export default function ProviderDashboard() {
         duration_days: durationDays,
         coverage_details: {
           items: [
-            'Atención profesional certificada',
-            'Garantía respaldada en smart contract',
-            'Soporte directo para reclamos',
+            t('providerDashboard.coverageItem1'),
+            t('providerDashboard.coverageItem2'),
+            t('providerDashboard.coverageItem3'),
           ],
         },
       });
@@ -134,47 +136,52 @@ export default function ProviderDashboard() {
       fetchData();
       setActiveTab('services');
     } catch (err: any) {
-      setCreateError(err.message || 'Error al publicar el servicio.');
+      const msg = err.message || t('providerDashboard.errorPublishService');
+      if (msg.includes('unauthorized')) {
+        setCreateError(t('providerDashboard.errorSessionExpired'));
+      } else {
+        setCreateError(msg);
+      }
     } finally {
       setCreating(false);
     }
   };
 
   const handleApproveClaim = async (claimId: string) => {
-    if (!window.confirm('¿Deseas aprobar este reclamo y liberar el pago de garantía?')) return;
+    if (!window.confirm(t('providerDashboard.confirmApproveClaim'))) return;
     setActionLoadingId(claimId);
     try {
       await api.approveClaim(claimId);
       await fetchData();
     } catch (err: any) {
-      alert(err.message || 'Error al aprobar reclamo');
+      alert(err.message || t('providerDashboard.errorApproveClaim'));
     } finally {
       setActionLoadingId(null);
     }
   };
 
   const handleRejectClaim = async (claimId: string) => {
-    if (!window.confirm('¿Deseas rechazar este reclamo?')) return;
+    if (!window.confirm(t('providerDashboard.confirmRejectClaim'))) return;
     setActionLoadingId(claimId);
     try {
       await api.rejectClaim(claimId);
       await fetchData();
     } catch (err: any) {
-      alert(err.message || 'Error al rechazar reclamo');
+      alert(err.message || t('providerDashboard.errorRejectClaim'));
     } finally {
       setActionLoadingId(null);
     }
   };
 
-  if (!walletAddress) {
+  if (!walletAddress || !api.getToken()) {
     return (
       <main style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="auth-card" style={{ textAlign: 'center' }}>
           <div className="auth-logo"><Wallet size={28} color="white" /></div>
-          <h2 className="auth-title">Conecta tu Billetera</h2>
-          <p className="auth-subtitle">Inicia sesión para administrar tus pacientes, servicios y garantías.</p>
+          <h2 className="auth-title">{t('providerDashboard.conectaBilletera')}</h2>
+          <p className="auth-subtitle">{t('providerDashboard.conectaBilleteraDesc')}</p>
           <Link to="/wallet-connect" className="btn-primary" style={{ justifyContent: 'center' }}>
-            Conectar Billetera
+            {t('providerDashboard.conectarBilletera')}
           </Link>
         </div>
       </main>
@@ -197,11 +204,11 @@ export default function ProviderDashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(16, 163, 74, 0.1)', color: '#16a34a', borderRadius: 20, fontSize: '0.8125rem', fontWeight: 600, marginBottom: 8 }}>
-                <Briefcase size={14} /> Panel del Proveedor / Prestador
+                <Briefcase size={14} /> {t('providerDashboard.panelProveedor')}
               </div>
-              <h1 className="dashboard-title">Administración de Servicios & Pacientes</h1>
+              <h1 className="dashboard-title">{t('providerDashboard.adminServicios')}</h1>
               <p className="dashboard-subtitle">
-                Gestiona tus suscriptores, publica planes de garantía y revisa reclamos en Polygon.
+                {t('providerDashboard.gestionaSuscriptores')}
               </p>
             </div>
 
@@ -210,10 +217,10 @@ export default function ProviderDashboard() {
                 onClick={fetchData} 
                 className="btn-secondary" 
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px' }}
-                title="Actualizar datos"
+                title={t('providerDashboard.actualizarDatos')}
               >
                 <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                Actualizar
+                {t('providerDashboard.actualizar')}
               </button>
 
               <button 
@@ -224,7 +231,15 @@ export default function ProviderDashboard() {
                 className="btn-secondary"
                 style={{ borderColor: '#2563eb', color: '#2563eb' }}
               >
-                Cambiar a Modo Cliente 🛡️
+                {t('providerDashboard.cambiarCliente')}
+              </button>
+
+              <button 
+                onClick={() => navigate('/dashboard/locks')} 
+                className="btn-primary" 
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--primary)' }}
+              >
+                <Lock size={16} /> {t('providerDashboard.gestionarLocks')}
               </button>
 
               <button 
@@ -232,7 +247,7 @@ export default function ProviderDashboard() {
                 className="btn-primary" 
                 style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#16a34a' }}
               >
-                <Plus size={16} /> Crear Nuevo Plan / Servicio
+                <Plus size={16} /> {t('providerDashboard.crearNuevoPlan')}
               </button>
             </div>
           </div>
@@ -247,7 +262,7 @@ export default function ProviderDashboard() {
               <Users size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Pacientes / Clientes Activos</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{t('providerDashboard.pacientesActivos')}</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{activePatients} <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>({totalPatients} total)</span></div>
             </div>
           </div>
@@ -257,8 +272,8 @@ export default function ProviderDashboard() {
               <TrendingUp size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Ingresos Mensuales Proyectados</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>${monthlyRevenue.toFixed(2)} USD</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{t('providerDashboard.ingresosMensuales')}</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>${monthlyRevenue.toFixed(2)} ETH</div>
             </div>
           </div>
 
@@ -267,7 +282,7 @@ export default function ProviderDashboard() {
               <AlertTriangle size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Reclamos por Revisar</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{t('providerDashboard.reclamosRevisar')}</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 700, color: pendingClaims.length > 0 ? '#ea580c' : 'inherit' }}>
                 {pendingClaims.length}
               </div>
@@ -279,7 +294,7 @@ export default function ProviderDashboard() {
               <Shield size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Servicios Publicados</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{t('providerDashboard.serviciosPublicados')}</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{services.length}</div>
             </div>
           </div>
@@ -291,19 +306,19 @@ export default function ProviderDashboard() {
             className={`tab-btn ${activeTab === 'patients' ? 'active' : ''}`}
             onClick={() => setActiveTab('patients')}
           >
-            Pacientes / Clientes Suscritos ({patients.length})
+            {t('providerDashboard.pacientesSuscritos')} ({patients.length})
           </button>
           <button 
             className={`tab-btn ${activeTab === 'services' ? 'active' : ''}`}
             onClick={() => setActiveTab('services')}
           >
-            Mis Servicios Publicados ({services.length})
+            {t('providerDashboard.misServicios')} ({services.length})
           </button>
           <button 
             className={`tab-btn ${activeTab === 'claims' ? 'active' : ''}`}
             onClick={() => setActiveTab('claims')}
           >
-            Reclamos Recibidos ({claims.length})
+            {t('providerDashboard.reclamosRecibidos')} ({claims.length})
           </button>
         </div>
 
@@ -313,17 +328,17 @@ export default function ProviderDashboard() {
             {loading ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
                 <div className="animate-spin" style={{ width: 36, height: 36, border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', margin: '0 auto 16px' }} />
-                Cargando suscriptores desde la red Polygon...
+                {t('providerDashboard.loadingSubscribers')}
               </div>
             ) : patients.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--bg-secondary)', borderRadius: 16, border: '1px dashed var(--border)' }}>
                 <Users size={48} color="#16a34a" style={{ opacity: 0.6, margin: '0 auto 16px' }} />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 8 }}>Aún no tienes pacientes suscritos</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 8 }}>{t('providerDashboard.noPatientsYet')}</h3>
                 <p style={{ color: 'var(--text-muted)', maxWidth: 480, margin: '0 auto 24px' }}>
-                  Cuando los clientes contraten tus planes de garantía en la plataforma, aparecerán aquí para que puedas gestionar su atención.
+                  {t('providerDashboard.noPatientsDesc')}
                 </p>
                 <button onClick={() => setShowCreateModal(true)} className="btn-primary" style={{ background: '#16a34a' }}>
-                  Publicar Nuevo Servicio
+                  {t('providerDashboard.publicarNuevoServicio')}
                 </button>
               </div>
             ) : (
@@ -332,19 +347,19 @@ export default function ProviderDashboard() {
                   <div key={patient.id} className="contract-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 2 }}>Billetera del Paciente / Cliente</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 2 }}>{t('providerDashboard.billeteraPaciente')}</div>
                         <h3 style={{ fontFamily: 'monospace', fontSize: '1rem', fontWeight: 700, margin: 0 }}>
-                          {patient.customer_address ? `${patient.customer_address.slice(0, 12)}...${patient.customer_address.slice(-8)}` : 'Paciente'}
+                          {patient.customer_address ? `${patient.customer_address.slice(0, 12)}...${patient.customer_address.slice(-8)}` : t('providerDashboard.paciente')}
                         </h3>
                         <p style={{ fontSize: '0.875rem', color: 'var(--primary)', fontWeight: 600, marginTop: 4 }}>
-                          Plan: {patient.service_title || 'Garantía'}
+                          {t('providerDashboard.plan')}: {patient.service_title || t('providerDashboard.garantia')}
                         </p>
                       </div>
 
                       <span className={`status-badge status-${patient.status}`}>
                         {patient.status === 'active' && <CheckCircle size={14} />}
                         {patient.status === 'claimed' && <Clock size={14} />}
-                        {patient.status === 'active' ? 'Suscripción Activa' : patient.status === 'claimed' ? 'Reclamo en Curso' : patient.status}
+                        {patient.status === 'active' ? t('providerDashboard.suscripcionActiva') : patient.status === 'claimed' ? t('providerDashboard.reclamoEnCurso') : patient.status}
                       </span>
                     </div>
 
@@ -357,28 +372,28 @@ export default function ProviderDashboard() {
                       borderTop: '1px solid var(--border)',
                     }}>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Abono Mensual</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('providerDashboard.abonoMensual')}</div>
                         <div style={{ fontWeight: 700, fontSize: '1rem', color: '#16a34a' }}>
-                          ${patient.price_usd || 0} USD
+                          ${patient.price_usd || 0} ETH
                         </div>
                       </div>
 
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monto Cobertura</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('providerDashboard.montoCobertura')}</div>
                         <div style={{ fontWeight: 700, fontSize: '1rem' }}>
                           ${patient.coverage_amount?.toLocaleString() || 0} USD
                         </div>
                       </div>
 
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fecha Suscripción</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('providerDashboard.fechaSuscripcion')}</div>
                         <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                          {patient.signed_at ? new Date(patient.signed_at).toLocaleDateString() : 'Activo'}
+                          {patient.signed_at ? new Date(patient.signed_at).toLocaleDateString() : t('providerDashboard.activo')}
                         </div>
                       </div>
 
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Polygon Contract</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('providerDashboard.redBlockchain')}</div>
                         <div style={{ fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 4 }}>
                           EIP-4361 / Unlock
                           <ExternalLink size={12} color="var(--text-muted)" />
@@ -396,13 +411,13 @@ export default function ProviderDashboard() {
         {activeTab === 'services' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Catálogo de Planes y Garantías</h2>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{t('providerDashboard.catalogoPlanes')}</h2>
               <button 
                 onClick={() => setShowCreateModal(true)} 
                 className="btn-primary" 
                 style={{ background: '#16a34a', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px' }}
               >
-                <Plus size={16} /> Crear Plan
+                <Plus size={16} /> {t('providerDashboard.crearPlan')}
               </button>
             </div>
 
@@ -427,19 +442,19 @@ export default function ProviderDashboard() {
                     <div>
                       <div className="service-pricing" style={{ margin: '16px 0 12px' }}>
                         <div>
-                          <div className="price-label">Precio Mensual</div>
-                          <div className="price-value" style={{ color: '#16a34a' }}>${service.price_usd} USD</div>
+                          <div className="price-label">{t('providerDashboard.precioMensual')}</div>
+                          <div className="price-value" style={{ color: '#16a34a' }}>${service.price_usd} ETH</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div className="coverage-label">Garantía Máx</div>
+                          <div className="coverage-label">{t('providerDashboard.garantiaMax')}</div>
                           <div className="coverage-value">${service.coverage_amount} USD</div>
                         </div>
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                        <span>👥 {service.active_members || 0} suscriptores activos</span>
+                        <span>👥 {service.active_members || 0} {t('providerDashboard.suscriptoresActivos')}</span>
                         <Link to={`/services/${service.id}`} style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
-                          Ver Público →
+                          {t('providerDashboard.verPublico')}
                         </Link>
                       </div>
                     </div>
@@ -456,9 +471,9 @@ export default function ProviderDashboard() {
             {claims.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--bg-secondary)', borderRadius: 16, border: '1px dashed var(--border)' }}>
                 <CheckCircle size={48} color="#16a34a" style={{ opacity: 0.6, margin: '0 auto 16px' }} />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 8 }}>Sin reclamos pendientes</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 8 }}>{t('providerDashboard.sinReclamos')}</h3>
                 <p style={{ color: 'var(--text-muted)', maxWidth: 460, margin: '0 auto' }}>
-                  No tienes reclamos radicados por tus clientes o pacientes en este momento.
+                  {t('providerDashboard.sinReclamosDesc')}
                 </p>
               </div>
             ) : (
@@ -468,10 +483,10 @@ export default function ProviderDashboard() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                       <div>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: 4 }}>
-                          Reclamo: {claim.service_title || 'Servicio'}
+                          {t('providerDashboard.reclamo')}: {claim.service_title || t('providerDashboard.servicio')}
                         </h3>
                         <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                          Cliente: {claim.customer_address || 'Dirección de Cliente'}
+                          {t('providerDashboard.cliente')}: {claim.customer_address || t('providerDashboard.direccionCliente')}
                         </p>
                       </div>
 
@@ -479,12 +494,12 @@ export default function ProviderDashboard() {
                         {claim.status === 'approved' && <CheckCircle size={14} />}
                         {claim.status === 'pending' && <Clock size={14} />}
                         {claim.status === 'rejected' && <AlertTriangle size={14} />}
-                        {claim.status === 'approved' ? 'Aprobado' : claim.status === 'pending' ? 'Pendiente de Revisión' : 'Rechazado'}
+                        {claim.status === 'approved' ? t('providerDashboard.aprobado') : claim.status === 'pending' ? t('providerDashboard.pendienteRevision') : t('providerDashboard.rechazado')}
                       </span>
                     </div>
 
                     <div style={{ background: 'var(--bg-secondary)', padding: '12px 16px', borderRadius: 8, margin: '14px 0', fontSize: '0.9375rem', lineHeight: 1.5 }}>
-                      <strong>Descripción del Incidente:</strong> {claim.description}
+                      <strong>{t('providerDashboard.descripcionIncidente')}:</strong> {claim.description}
                     </div>
 
                     <div style={{ 
@@ -497,8 +512,8 @@ export default function ProviderDashboard() {
                       borderTop: '1px solid var(--border)',
                     }}>
                       <div>
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Monto Solicitado: </span>
-                        <strong style={{ color: '#ea580c', fontSize: '1.125rem' }}>${claim.amount} USD</strong>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('providerDashboard.montoSolicitado')}: </span>
+                        <strong style={{ color: '#ea580c', fontSize: '1.125rem' }}>${claim.amount} ETH</strong>
                       </div>
 
                       {claim.status === 'pending' && (
@@ -509,7 +524,7 @@ export default function ProviderDashboard() {
                             className="btn-primary"
                             style={{ background: '#16a34a', padding: '8px 16px', fontSize: '0.875rem' }}
                           >
-                            ✓ Aprobar Reclamo
+                            ✓ {t('providerDashboard.aprobarReclamo')}
                           </button>
                           <button
                             onClick={() => handleRejectClaim(claim.id)}
@@ -517,7 +532,7 @@ export default function ProviderDashboard() {
                             className="btn-secondary"
                             style={{ color: '#f54242', padding: '8px 16px', fontSize: '0.875rem' }}
                           >
-                            ✕ Rechazar
+                            ✕ {t('providerDashboard.rechazar')}
                           </button>
                         </div>
                       )}
@@ -559,9 +574,9 @@ export default function ProviderDashboard() {
                 <Plus size={22} color="#16a34a" />
               </div>
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Crear Nuevo Plan de Garantía</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{t('providerDashboard.crearPlanTitle')}</h3>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: 0 }}>
-                  Ofrece tus servicios profesionales con respaldo en la blockchain de Polygon.
+                  {t('providerDashboard.ofreceServicios')}
                 </p>
               </div>
             </div>
@@ -576,13 +591,13 @@ export default function ProviderDashboard() {
 
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 6 }}>
-                  Título del Servicio o Plan
+                  {t('providerDashboard.tituloServicio')}
                 </label>
                 <input 
                   type="text" 
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ej: Plan Dental Premium, Mantenimiento de Frenos, Telemedicina 24/7"
+                  placeholder={t('providerDashboard.placeholderTitulo')}
                   required
                   style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.9375rem' }}
                 />
@@ -591,7 +606,7 @@ export default function ProviderDashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 6 }}>
-                    Categoría
+                    {t('providerDashboard.categoria')}
                   </label>
                   <select
                     value={category}
@@ -606,7 +621,7 @@ export default function ProviderDashboard() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 6 }}>
-                    Duración (Días)
+                    {t('providerDashboard.duracionDias')}
                   </label>
                   <input 
                     type="number" 
@@ -621,7 +636,7 @@ export default function ProviderDashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 6 }}>
-                    Precio Mensual (USD)
+                    {t('providerDashboard.precioMensualLabel')}
                   </label>
                   <input 
                     type="number" 
@@ -629,7 +644,7 @@ export default function ProviderDashboard() {
                     min="1"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder="Ej: 39.00"
+                    placeholder={t('providerDashboard.placeholderPrecio')}
                     required
                     style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.9375rem' }}
                   />
@@ -637,7 +652,7 @@ export default function ProviderDashboard() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 6 }}>
-                    Límite Cobertura Garantía (USD)
+                    {t('providerDashboard.limiteCobertura')}
                   </label>
                   <input 
                     type="number" 
@@ -645,7 +660,7 @@ export default function ProviderDashboard() {
                     min="10"
                     value={coverage}
                     onChange={(e) => setCoverage(e.target.value)}
-                    placeholder="Ej: 2000"
+                    placeholder={t('providerDashboard.placeholderCobertura')}
                     required
                     style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.9375rem' }}
                   />
@@ -654,13 +669,13 @@ export default function ProviderDashboard() {
 
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 6 }}>
-                  Descripción Detallada de la Garantía
+                  {t('providerDashboard.descripcionDetallada')}
                 </label>
                 <textarea 
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe qué procedimientos, atenciones o repuestos cubre tu plan garantizado..."
+                  placeholder={t('providerDashboard.placeholderDescripcion')}
                   required
                   style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.9375rem', resize: 'vertical' }}
                 />
@@ -672,7 +687,7 @@ export default function ProviderDashboard() {
                   onClick={() => setShowCreateModal(false)}
                   className="btn-secondary"
                 >
-                  Cancelar
+                  {t('providerDashboard.cancelar')}
                 </button>
                 <button 
                   type="submit" 
@@ -680,7 +695,7 @@ export default function ProviderDashboard() {
                   className="btn-primary"
                   style={{ background: '#16a34a' }}
                 >
-                  {creating ? 'Publicando en Polygon...' : 'Publicar Servicio y Garantía'}
+                  {creating ? t('providerDashboard.publicandoSepolia') : t('providerDashboard.publicarServicio')}
                 </button>
               </div>
             </form>

@@ -39,7 +39,7 @@ func Close() {
 }
 
 func RunMigrations() error {
-	migrationFile := "database/migrations/001_initial.sql"
+	migrationFile := "../database/migrations/001_initial.sql"
 	content, err := os.ReadFile(migrationFile)
 	if err != nil {
 		return fmt.Errorf("unable to read migration file: %w", err)

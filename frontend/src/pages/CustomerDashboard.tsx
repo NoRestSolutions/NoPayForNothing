@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Shield, FileText, Clock, 
+import { useTranslation } from 'react-i18next';
+import {
+  Shield, FileText, Clock,
   CheckCircle, TrendingUp,
   Wallet, AlertCircle, Plus,
   Sparkles, ExternalLink, X, RefreshCw
@@ -36,6 +37,7 @@ interface ClaimItem {
 }
 
 export default function CustomerDashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { walletAddress, updateRole } = useAuth();
   const [contracts, setContracts] = useState<ContractItem[]>([]);
@@ -83,17 +85,17 @@ export default function CustomerDashboard() {
 
     const amountNum = parseFloat(claimAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
-      setClaimError('Por favor ingresa un monto válido.');
+      setClaimError(t('customerDashboard.montoValido'));
       return;
     }
 
     if (selectedContract.coverage_amount && amountNum > selectedContract.coverage_amount) {
-      setClaimError(`El monto no puede exceder el límite de cobertura de $${selectedContract.coverage_amount} USD.`);
+      setClaimError(t('customerDashboard.montoLimite', { amount: selectedContract.coverage_amount }));
       return;
     }
 
     if (!claimDescription.trim()) {
-      setClaimError('Por favor explica el motivo del reclamo.');
+      setClaimError(t('customerDashboard.motivoReclamo'));
       return;
     }
 
@@ -107,7 +109,7 @@ export default function CustomerDashboard() {
         evidence_urls: claimEvidence ? [claimEvidence.trim()] : [],
       });
 
-      setClaimSuccess('¡Reclamo radicado con éxito! El proveedor ha sido notificado para su revisión.');
+      setClaimSuccess(t('customerDashboard.reclamoExito'));
       setClaimAmount('');
       setClaimDescription('');
       setClaimEvidence('');
@@ -118,34 +120,34 @@ export default function CustomerDashboard() {
         setActiveTab('claims');
       }, 1800);
     } catch (err: any) {
-      setClaimError(err.message || 'Error al radicar el reclamo.');
+      setClaimError(err.message || t('customerDashboard.errorReclamo'));
     } finally {
       setSubmittingClaim(false);
     }
   };
 
   const handleTerminateContract = async (contractId: string) => {
-    if (!window.confirm('¿Estás seguro de cancelar esta suscripción de garantía?')) return;
+    if (!window.confirm(t('customerDashboard.confirmarCancelacion'))) return;
     setTerminatingId(contractId);
     try {
       await api.terminateContract(contractId);
       await fetchData();
     } catch (err: any) {
-      alert(err.message || 'Error al cancelar contrato');
+      alert(err.message || t('customerDashboard.errorCancelar'));
     } finally {
       setTerminatingId(null);
     }
   };
 
-  if (!walletAddress) {
+  if (!walletAddress || !api.getToken()) {
     return (
       <main style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="auth-card" style={{ textAlign: 'center' }}>
           <div className="auth-logo"><Wallet size={28} color="white" /></div>
-          <h2 className="auth-title">Conecta tu Billetera</h2>
-          <p className="auth-subtitle">Conecta tu billetera para administrar tus suscripciones y garantías.</p>
+          <h2 className="auth-title">{t('customerDashboard.conectaBilletera')}</h2>
+          <p className="auth-subtitle">{t('customerDashboard.conectaBilleteraDesc')}</p>
           <Link to="/wallet-connect" className="btn-primary" style={{ justifyContent: 'center' }}>
-            Conectar Billetera
+            {t('customerDashboard.conectarBilletera')}
           </Link>
         </div>
       </main>
@@ -170,11 +172,11 @@ export default function CustomerDashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', borderRadius: 20, fontSize: '0.8125rem', fontWeight: 600, marginBottom: 8 }}>
-                <Shield size={14} /> Panel del Cliente / Paciente
+                <Shield size={14} /> {t('customerDashboard.panelCliente')}
               </div>
-              <h1 className="dashboard-title">Mis Garantías y Suscripciones</h1>
+              <h1 className="dashboard-title">{t('customerDashboard.misGarantias')}</h1>
               <p className="dashboard-subtitle">
-                Supervisa tus contratos respaldados en blockchain, coberturas y radicación de reclamos.
+                {t('customerDashboard.supervisaContratos')}
               </p>
             </div>
 
@@ -183,10 +185,10 @@ export default function CustomerDashboard() {
                 onClick={fetchData} 
                 className="btn-secondary" 
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px' }}
-                title="Actualizar datos"
+                title={t('customerDashboard.actualizarDatos')}
               >
                 <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                Actualizar
+                {t('customerDashboard.actualizar')}
               </button>
               
               <button 
@@ -197,11 +199,11 @@ export default function CustomerDashboard() {
                 className="btn-secondary"
                 style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}
               >
-                Cambiar a Modo Proveedor 🩺
+                {t('customerDashboard.cambiarProveedor')}
               </button>
 
               <Link to="/services" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Plus size={16} /> Contratar Nueva Garantía
+                <Plus size={16} /> {t('customerDashboard.contratarNueva')}
               </Link>
             </div>
           </div>
@@ -216,7 +218,7 @@ export default function CustomerDashboard() {
               <Shield size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Garantías Activas</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{t('customerDashboard.garantiasActivas')}</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{activeContractsCount}</div>
             </div>
           </div>
@@ -226,8 +228,8 @@ export default function CustomerDashboard() {
               <TrendingUp size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Gasto Mensual</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>${totalMonthlySpend.toFixed(2)} USD</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{t('customerDashboard.gastoMensual')}</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>${totalMonthlySpend.toFixed(2)} ETH</div>
             </div>
           </div>
 
@@ -236,7 +238,7 @@ export default function CustomerDashboard() {
               <Sparkles size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Cobertura Protegida Total</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{t('customerDashboard.coberturaTotal')}</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>${totalCoverage.toLocaleString()} USD</div>
             </div>
           </div>
@@ -246,7 +248,7 @@ export default function CustomerDashboard() {
               <FileText size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Reclamos Pendientes</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{t('customerDashboard.reclamosPendientes')}</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{pendingClaimsCount}</div>
             </div>
           </div>
@@ -258,13 +260,13 @@ export default function CustomerDashboard() {
             className={`tab-btn ${activeTab === 'contracts' ? 'active' : ''}`}
             onClick={() => setActiveTab('contracts')}
           >
-            Mis Suscripciones ({contracts.length})
+            {t('customerDashboard.misSuscripciones')} ({contracts.length})
           </button>
           <button 
             className={`tab-btn ${activeTab === 'claims' ? 'active' : ''}`}
             onClick={() => setActiveTab('claims')}
           >
-            Historial de Reclamos ({claims.length})
+            {t('customerDashboard.historialReclamos')} ({claims.length})
           </button>
         </div>
 
@@ -274,17 +276,17 @@ export default function CustomerDashboard() {
             {loading ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
                 <div className="animate-spin" style={{ width: 36, height: 36, border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', margin: '0 auto 16px' }} />
-                Cargando tus suscripciones desde la blockchain...
+                {t('customerDashboard.cargandoBlockchain')}
               </div>
             ) : contracts.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--bg-secondary)', borderRadius: 16, border: '1px dashed var(--border)' }}>
                 <Shield size={48} color="var(--primary)" style={{ opacity: 0.6, margin: '0 auto 16px' }} />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 8 }}>Aún no tienes garantías contratadas</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 8 }}>{t('customerDashboard.noGarantias')}</h3>
                 <p style={{ color: 'var(--text-muted)', maxWidth: 460, margin: '0 auto 24px' }}>
-                  Explora los servicios disponibles de médicos, mecánicos, dentistas y plomeros con garantías respaldadas en Polygon.
+                  {t('customerDashboard.exploraServicios')}
                 </p>
                 <Link to="/services" className="btn-primary">
-                  Explorar Catálogo de Servicios
+                  {t('customerDashboard.explorarCatalogo')}
                 </Link>
               </div>
             ) : (
@@ -294,10 +296,10 @@ export default function CustomerDashboard() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                       <div>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: 4 }}>
-                          {contract.service_title || 'Garantía de Servicio'}
+                          {contract.service_title || t('customerDashboard.garantiaServicio')}
                         </h3>
                         <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                          🏢 Proveedor: <strong style={{ color: 'var(--text-primary)' }}>{contract.provider_name || 'Proveedor Verificado'}</strong>
+                          🏢 {t('customerDashboard.proveedor')}: <strong style={{ color: 'var(--text-primary)' }}>{contract.provider_name || t('customerDashboard.proveedorVerificado')}</strong>
                         </p>
                       </div>
 
@@ -306,7 +308,7 @@ export default function CustomerDashboard() {
                           {contract.status === 'active' && <CheckCircle size={14} />}
                           {contract.status === 'claimed' && <Clock size={14} />}
                           {contract.status === 'terminated' && <AlertCircle size={14} />}
-                          {contract.status === 'active' ? 'Activo' : contract.status === 'claimed' ? 'Reclamo en Proceso' : contract.status}
+                          {contract.status === 'active' ? t('customerDashboard.activo') : contract.status === 'claimed' ? t('customerDashboard.reclamoEnProceso') : contract.status}
                         </span>
                       </div>
                     </div>
@@ -320,30 +322,30 @@ export default function CustomerDashboard() {
                       borderTop: '1px solid var(--border)',
                     }}>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Precio Mensual</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('customerDashboard.precioMensual')}</div>
                         <div style={{ fontWeight: 700, fontSize: '1.0625rem', color: 'var(--primary)' }}>
-                          ${contract.price_usd || 0} USD
+                          ${contract.price_usd || 0} ETH
                         </div>
                       </div>
 
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cobertura Garantizada</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('customerDashboard.coberturaGarantizada')}</div>
                         <div style={{ fontWeight: 700, fontSize: '1.0625rem', color: '#00b35e' }}>
                           ${contract.coverage_amount?.toLocaleString() || 0} USD
                         </div>
                       </div>
 
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fecha de Inicio</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('customerDashboard.fechaInicio')}</div>
                         <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                          {contract.signed_at ? new Date(contract.signed_at).toLocaleDateString() : 'Activa'}
+                          {contract.signed_at ? new Date(contract.signed_at).toLocaleDateString() : t('customerDashboard.activa')}
                         </div>
                       </div>
 
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Red Blockchain</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('customerDashboard.redBlockchain')}</div>
                         <div style={{ fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          Polygon (137)
+                          Sepolia (11155111)
                           <ExternalLink size={12} color="var(--text-muted)" />
                         </div>
                       </div>
@@ -362,7 +364,7 @@ export default function CustomerDashboard() {
                             className="btn-primary"
                             style={{ padding: '8px 16px', fontSize: '0.875rem' }}
                           >
-                            Radicar Reclamo de Garantía 🛡️
+                            {t('customerDashboard.radicarReclamo')}
                           </button>
 
                           <button
@@ -371,7 +373,7 @@ export default function CustomerDashboard() {
                             className="btn-secondary"
                             style={{ padding: '8px 16px', fontSize: '0.875rem', color: '#f54242' }}
                           >
-                            {terminatingId === contract.id ? 'Cancelando...' : 'Cancelar Suscripción'}
+                            {terminatingId === contract.id ? t('customerDashboard.cancelando') : t('customerDashboard.cancelarSuscripcion')}
                           </button>
                         </>
                       )}
@@ -389,14 +391,14 @@ export default function CustomerDashboard() {
             {loading ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
                 <div className="animate-spin" style={{ width: 36, height: 36, border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', margin: '0 auto 16px' }} />
-                Cargando historial de reclamos...
+                {t('customerDashboard.cargandoReclamos')}
               </div>
             ) : claims.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--bg-secondary)', borderRadius: 16, border: '1px dashed var(--border)' }}>
                 <CheckCircle size={48} color="#00b35e" style={{ opacity: 0.6, margin: '0 auto 16px' }} />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 8 }}>No tienes reclamos abiertos</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 8 }}>{t('customerDashboard.noReclamos')}</h3>
                 <p style={{ color: 'var(--text-muted)', maxWidth: 460, margin: '0 auto' }}>
-                  Todos tus servicios están funcionando correctamente. Si tienes un problema con una garantía activa, puedes radicar un reclamo desde la pestaña de suscripciones.
+                  {t('customerDashboard.sinProblemas')}
                 </p>
               </div>
             ) : (
@@ -406,10 +408,10 @@ export default function CustomerDashboard() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                       <div>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: 4 }}>
-                          {claim.service_title || 'Reclamo de Garantía'}
+                          {claim.service_title || t('customerDashboard.reclamoGarantia')}
                         </h3>
                         <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                          Proveedor: <strong>{claim.provider_name || 'Proveedor'}</strong>
+                          {t('customerDashboard.proveedor')}: <strong>{claim.provider_name || t('customerDashboard.proveedor')}</strong>
                         </p>
                       </div>
 
@@ -417,12 +419,12 @@ export default function CustomerDashboard() {
                         {claim.status === 'approved' && <CheckCircle size={14} />}
                         {claim.status === 'pending' && <Clock size={14} />}
                         {claim.status === 'rejected' && <AlertCircle size={14} />}
-                        {claim.status === 'approved' ? 'Aprobado / Pagado' : claim.status === 'pending' ? 'En Revisión' : 'Rechazado'}
+                        {claim.status === 'approved' ? t('customerDashboard.aprobado') : claim.status === 'pending' ? t('customerDashboard.enRevision') : t('customerDashboard.rechazado')}
                       </span>
                     </div>
 
                     <div style={{ background: 'var(--bg-secondary)', padding: '12px 16px', borderRadius: 8, margin: '14px 0', fontSize: '0.9375rem', lineHeight: 1.5 }}>
-                      <strong>Motivo del Reclamo:</strong> {claim.description}
+                      <strong>{t('customerDashboard.motivoReclamoLabel')}</strong> {claim.description}
                     </div>
 
                     <div style={{ 
@@ -433,12 +435,12 @@ export default function CustomerDashboard() {
                       fontSize: '0.875rem',
                     }}>
                       <div>
-                        <span style={{ color: 'var(--text-muted)' }}>Monto Solicitado: </span>
-                        <strong style={{ color: 'var(--primary)', fontSize: '1rem' }}>${claim.amount} USD</strong>
+                        <span style={{ color: 'var(--text-muted)' }}>{t('customerDashboard.montoSolicitado')}</span>
+                        <strong style={{ color: 'var(--primary)', fontSize: '1rem' }}>${claim.amount} ETH</strong>
                       </div>
                       <div>
-                        <span style={{ color: 'var(--text-muted)' }}>Fecha: </span>
-                        <strong>{claim.created_at ? new Date(claim.created_at).toLocaleDateString() : 'Reciente'}</strong>
+                        <span style={{ color: 'var(--text-muted)' }}>{t('customerDashboard.fecha')}</span>
+                        <strong>{claim.created_at ? new Date(claim.created_at).toLocaleDateString() : t('customerDashboard.reciente')}</strong>
                       </div>
                     </div>
                   </div>
@@ -478,7 +480,7 @@ export default function CustomerDashboard() {
                 <Shield size={22} color="#ea580c" />
               </div>
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Radicar Reclamo de Garantía</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{t('customerDashboard.tituloRadicar')}</h3>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: 0 }}>
                   {selectedContract.service_title} ({selectedContract.provider_name})
                 </p>
@@ -501,7 +503,7 @@ export default function CustomerDashboard() {
 
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 6 }}>
-                    Monto a Reclamar (USD)
+                    {t('customerDashboard.montoReclamar')}
                   </label>
                   <input 
                     type="number" 
@@ -510,24 +512,24 @@ export default function CustomerDashboard() {
                     max={selectedContract.coverage_amount || 10000}
                     value={claimAmount}
                     onChange={(e) => setClaimAmount(e.target.value)}
-                    placeholder={`Máx $${selectedContract.coverage_amount || 0} USD`}
+                    placeholder={t('customerDashboard.montoMaxPlaceholder', { amount: selectedContract.coverage_amount || 0 })}
                     required
                     style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
                   />
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Límite máximo de cobertura: ${selectedContract.coverage_amount || 0} USD
+                    {t('customerDashboard.limiteCobertura', { amount: selectedContract.coverage_amount || 0 })}
                   </span>
                 </div>
 
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 6 }}>
-                    Explicación del Incidente o Incumplimiento
+                    {t('customerDashboard.explicacionIncidente')}
                   </label>
                   <textarea 
                     rows={4}
                     value={claimDescription}
                     onChange={(e) => setClaimDescription(e.target.value)}
-                    placeholder="Describe detalladamente qué problema ocurrió con el servicio garantizado..."
+                    placeholder={t('customerDashboard.descripcionPlaceholder')}
                     required
                     style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.9375rem', resize: 'vertical' }}
                   />
@@ -535,13 +537,13 @@ export default function CustomerDashboard() {
 
                 <div style={{ marginBottom: 24 }}>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: 6 }}>
-                    Enlace de Evidencia / Factura (Opcional)
+                    {t('customerDashboard.enlaceEvidencia')}
                   </label>
                   <input 
                     type="url" 
                     value={claimEvidence}
                     onChange={(e) => setClaimEvidence(e.target.value)}
-                    placeholder="https://ipfs.io/... o enlace a imagen de diagnóstico"
+                    placeholder={t('customerDashboard.evidenciaPlaceholder')}
                     style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.875rem' }}
                   />
                 </div>
@@ -552,14 +554,14 @@ export default function CustomerDashboard() {
                     onClick={() => setSelectedContract(null)}
                     className="btn-secondary"
                   >
-                    Cancelar
+                    {t('customerDashboard.cancelar')}
                   </button>
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={submittingClaim}
                     className="btn-primary"
                   >
-                    {submittingClaim ? 'Enviando a Blockchain...' : 'Confirmar y Radicar Reclamo'}
+                    {submittingClaim ? t('customerDashboard.enviandoBlockchain') : t('customerDashboard.confirmarRadicar')}
                   </button>
                 </div>
               </form>

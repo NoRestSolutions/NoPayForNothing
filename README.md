@@ -1,6 +1,6 @@
 # NoPayForNothing
 
-Blockchain-backed service guarantees powered by Unlock Protocol on Polygon.
+Blockchain-backed service guarantees powered by Unlock Protocol on Sepolia.
 
 ## Overview
 
@@ -12,7 +12,7 @@ NoPayForNothing is a marketplace where service providers (mechanics, doctors, cl
 - **API Framework**: Chi router
 - **Database**: PostgreSQL
 - **Authentication**: SIWE (Sign-In with Ethereum) + JWT
-- **Blockchain**: Unlock Protocol on Polygon
+- **Blockchain**: Unlock Protocol on Sepolia
 
 ### Frontend (React)
 - **Framework**: React 18 + TypeScript

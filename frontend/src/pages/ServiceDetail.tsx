@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   Shield, CheckCircle, 
   Lock, ArrowLeft, Users, ExternalLink, AlertCircle
@@ -7,6 +8,7 @@ import {
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { categories } from '../config/config';
+import { openUnlockCheckout, getExplorerUrl } from '../lib/unlock';
 
 interface ServiceDetailData {
   id: string;
@@ -29,6 +31,7 @@ interface ServiceDetailData {
 export default function ServiceDetail() {
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated, signIn } = useAuth();
+  const { t } = useTranslation();
   
   const [service, setService] = useState<ServiceDetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +48,7 @@ export default function ServiceDetail() {
       })
       .catch(err => {
         console.error('Error fetching service:', err);
-        setError('No se pudo cargar la información del servicio.');
+        setError(t('serviceDetail.errorCargar'));
       })
       .finally(() => {
         setLoading(false);
@@ -61,18 +64,25 @@ export default function ServiceDetail() {
       try {
         await signIn('customer');
       } catch (err: any) {
-        setError(err.message || 'Por favor conecta tu billetera para contratar.');
+        setError(err.message || t('serviceDetail.conectaBilletera'));
         return;
       }
     }
 
+    // Si el servicio tiene lock_address, abrir Unlock Checkout
+    if (service.lock_address) {
+      openUnlockCheckout(service.lock_address, service.title);
+      return;
+    }
+
+    // Si no tiene lock, crear contrato directo (fallback)
     setSubscribing(true);
     try {
       await api.createContract(service.id);
       setSubscribed(true);
     } catch (err: any) {
       console.error('Error subscribing:', err);
-      setError(err.message || 'Error al procesar el contrato de garantía.');
+      setError(err.message || t('serviceDetail.errorContrato'));
     } finally {
       setSubscribing(false);
     }
@@ -83,7 +93,7 @@ export default function ServiceDetail() {
       <main style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
           <div className="animate-spin" style={{ width: 40, height: 40, border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', margin: '0 auto 16px' }} />
-          <p style={{ color: 'var(--text-muted)' }}>Cargando detalles de la garantía...</p>
+          <p style={{ color: 'var(--text-muted)' }}>{t('serviceDetail.cargandoDetalles')}</p>
         </div>
       </main>
     );
@@ -94,10 +104,10 @@ export default function ServiceDetail() {
       <main style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div className="auth-card" style={{ textAlign: 'center' }}>
           <AlertCircle size={40} color="#f54242" style={{ margin: '0 auto 16px' }} />
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 8 }}>Servicio no encontrado</h2>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 8 }}>{t('serviceDetail.servicioNoEncontrado')}</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: 20 }}>{error}</p>
           <Link to="/services" className="btn-primary" style={{ justifyContent: 'center' }}>
-            Volver al Catálogo
+            {t('serviceDetail.volverCatalogo')}
           </Link>
         </div>
       </main>
@@ -129,11 +139,12 @@ export default function ServiceDetail() {
               <CheckCircle size={36} color="#00b35e" />
             </div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 12 }}>
-              ¡Garantía Activada con Éxito!
+              {t('serviceDetail.garantiaActivada')}
             </h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
-              Tu suscripción y contrato de garantía para <strong>{service.title}</strong> con <strong>{service.provider_name || 'el proveedor'}</strong> ya está registrado en Polygon.
-            </p>
+            <p 
+              style={{ color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}
+              dangerouslySetInnerHTML={{ __html: t('serviceDetail.suscripcionRegistrada', { title: service.title, provider: service.provider_name || 'el proveedor' }) }}
+            />
             <div style={{
               display: 'flex',
               gap: 12,
@@ -141,10 +152,10 @@ export default function ServiceDetail() {
               flexWrap: 'wrap',
             }}>
               <Link to="/dashboard/customer" className="btn-primary">
-                Ver en Mi Dashboard de Cliente
+                {t('serviceDetail.verDashboard')}
               </Link>
               <Link to="/services" className="btn-secondary">
-                Explorar Más Servicios
+                {t('serviceDetail.explorarMas')}
               </Link>
             </div>
           </div>
@@ -157,10 +168,10 @@ export default function ServiceDetail() {
 
   const categoryData = categories[service.category] || categories.doctor;
   const coverageItems = service.coverage_details?.items || [
-    'Atención y ejecución profesional garantizada',
-    'Revisión y solución prioritaria ante inconvenientes',
-    'Cobertura económica hasta el límite establecido en caso de incumplimiento',
-    'Contrato auditable firmado en Polygon',
+    t('serviceDetail.coverageItem1'),
+    t('serviceDetail.coverageItem2'),
+    t('serviceDetail.coverageItem3'),
+    t('serviceDetail.coverageItem4'),
   ];
 
   return (
@@ -179,7 +190,7 @@ export default function ServiceDetail() {
               fontSize: '0.9375rem',
             }}
           >
-            <ArrowLeft size={18} /> Volver al Catálogo
+            <ArrowLeft size={18} /> {t('serviceDetail.volverCatalogo')}
           </Link>
 
           <div style={{ 
@@ -227,7 +238,7 @@ export default function ServiceDetail() {
                   marginBottom: 16,
                   color: 'var(--text-primary)',
                 }}>
-                  Lo que incluye esta Garantía
+                  {t('serviceDetail.loQueIncluye')}
                 </h3>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {coverageItems.map((item: string, i: number) => (
@@ -253,7 +264,7 @@ export default function ServiceDetail() {
                   marginBottom: 16,
                   color: 'var(--text-primary)',
                 }}>
-                  Compromisos del Proveedor
+                  {t('serviceDetail.compromisosProveedor')}
                 </h3>
                 <div style={{
                   display: 'grid',
@@ -262,19 +273,19 @@ export default function ServiceDetail() {
                 }}>
                   <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', borderRadius: 10, fontSize: '0.875rem' }}>
                     <Shield size={16} color="var(--primary)" style={{ display: 'inline', marginRight: 6 }} />
-                    Protección hasta ${service.coverage_amount} USD
+                    {t('serviceDetail.proteccionHasta', { amount: service.coverage_amount })}
                   </div>
                   <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', borderRadius: 10, fontSize: '0.875rem' }}>
                     <CheckCircle size={16} color="#00b35e" style={{ display: 'inline', marginRight: 6 }} />
-                    Sin letras pequeñas
+                    {t('serviceDetail.sinLetrasPequeñas')}
                   </div>
                   <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', borderRadius: 10, fontSize: '0.875rem' }}>
                     <Users size={16} color="var(--primary)" style={{ display: 'inline', marginRight: 6 }} />
-                    Atención directa del prestador
+                    {t('serviceDetail.atencionDirecta')}
                   </div>
                   <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', borderRadius: 10, fontSize: '0.875rem' }}>
                     <ExternalLink size={16} color="#2563eb" style={{ display: 'inline', marginRight: 6 }} />
-                    Respaldado en Polygon
+                    {t('serviceDetail.respaldadoSepolia')}
                   </div>
                 </div>
               </div>
@@ -291,25 +302,25 @@ export default function ServiceDetail() {
             }}>
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: 4 }}>
-                  Precio Mensual
+                  {t('serviceDetail.precioMensual')}
                 </div>
                 <div style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--primary)' }}>
-                  ${service.price_usd} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>USD / mes</span>
+                  ${service.price_usd} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>{t('serviceDetail.ethMes')}</span>
                 </div>
               </div>
 
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: 4 }}>
-                  Monto de Cobertura Garantizada
+                  {t('serviceDetail.montoCobertura')}
                 </div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#00b35e' }}>
-                  Hasta ${service.coverage_amount?.toLocaleString()} USD
+                  {t('serviceDetail.hasta', { amount: service.coverage_amount?.toLocaleString() })}
                 </div>
               </div>
 
               <div style={{ marginBottom: 24 }}>
                 <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: 4 }}>
-                  Prestador del Servicio
+                  {t('serviceDetail.prestadorServicio')}
                 </div>
                 <div style={{ 
                   display: 'flex', 
@@ -320,7 +331,7 @@ export default function ServiceDetail() {
                   color: 'var(--text-primary)',
                 }}>
                   <Users size={18} color="var(--primary)" />
-                  {service.provider_name || 'Proveedor Verificado'}
+                  {service.provider_name || t('serviceDetail.proveedorVerificado')}
                 </div>
               </div>
 
@@ -339,12 +350,12 @@ export default function ServiceDetail() {
                 {subscribing ? (
                   <>
                     <div className="animate-spin" style={{ width: 18, height: 18, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }} />
-                    Confirmando Contrato en Polygon...
+                    {t('serviceDetail.confirmandoContrato')}
                   </>
                 ) : (
                   <>
                     <Lock size={18} />
-                    Contratar Garantía Ahora
+                    {t('serviceDetail.contratarAhora')}
                   </>
                 )}
               </button>
@@ -355,7 +366,7 @@ export default function ServiceDetail() {
                 textAlign: 'center',
                 lineHeight: 1.5,
               }}>
-                Contrato firmado mediante EIP-4361 en Polygon. Puedes cancelar o radicar reclamos cuando lo desees desde tu panel.
+                {t('serviceDetail.contratoFirmado')}
               </p>
             </div>
           </div>

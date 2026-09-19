@@ -1,40 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   Wallet, ArrowRight, CheckCircle, Shield, 
   Lock, ExternalLink, AlertCircle, Briefcase, UserCheck
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-const steps = [
-  { label: 'Conectar', icon: Wallet },
-  { label: 'Firmar', icon: Lock },
-  { label: 'Elegir Rol', icon: UserCheck },
-  { label: 'Listo', icon: CheckCircle },
-];
-
-const wallets = [
-  {
-    id: 'metamask',
-    name: 'MetaMask',
-    icon: '🦊',
-    description: 'Extensión popular para navegadores y móviles',
-  },
-  {
-    id: 'coinbase',
-    name: 'Coinbase Wallet',
-    icon: '🔵',
-    description: 'Billetera de autocustodia y Passkeys',
-  },
-  {
-    id: 'walletconnect',
-    name: 'WalletConnect / Móvil',
-    icon: '🔗',
-    description: 'Conecta cualquier billetera escaneando código QR',
-  },
-];
-
 export default function WalletConnect() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { walletAddress, role, signIn, updateRole, signOut } = useAuth();
   const [step, setStep] = useState(walletAddress ? 2 : 0);
@@ -42,6 +16,34 @@ export default function WalletConnect() {
   const [error, setError] = useState<string | null>(null);
   const [isSigning, setIsSigning] = useState(false);
   const [chosenRole, setChosenRole] = useState<'customer' | 'provider'>(role || 'customer');
+
+  const steps = [
+    { label: t('walletConnect.conectar'), icon: Wallet },
+    { label: t('walletConnect.firmar'), icon: Lock },
+    { label: t('walletConnect.elegirRol'), icon: UserCheck },
+    { label: t('walletConnect.listo'), icon: CheckCircle },
+  ];
+
+  const wallets = [
+    {
+      id: 'metamask',
+      name: 'MetaMask',
+      icon: '🦊',
+      description: t('walletConnect.metaMaskDesc'),
+    },
+    {
+      id: 'coinbase',
+      name: 'Coinbase Wallet',
+      icon: '🔵',
+      description: t('walletConnect.coinbaseDesc'),
+    },
+    {
+      id: 'walletconnect',
+      name: 'WalletConnect / Móvil',
+      icon: '🔗',
+      description: t('walletConnect.walletConnectDesc'),
+    },
+  ];
 
   const handleSelectWallet = async (wallet: typeof wallets[0]) => {
     setSelectedWallet(wallet.name);
@@ -55,12 +57,12 @@ export default function WalletConnect() {
       setStep(2);
     } catch (err: any) {
       console.error('Wallet connection error:', err);
-      let errorMsg = 'Error al conectar la billetera. Por favor intenta de nuevo.';
+      let errorMsg = t('walletConnect.errorConectar');
       if (err.message) {
         if (err.message.includes('User rejected') || err.message.includes('rejected')) {
-          errorMsg = 'Firma rechazada por el usuario en la billetera.';
+          errorMsg = t('walletConnect.firmaRechazada');
         } else if (err.message.includes('No se detectó')) {
-          errorMsg = 'No se encontró la extensión MetaMask o billetera Web3 instalada.';
+          errorMsg = t('walletConnect.noMetaMask');
         } else {
           errorMsg = err.message;
         }
@@ -94,9 +96,13 @@ export default function WalletConnect() {
           <div className="auth-logo" style={{ background: chosenRole === 'provider' ? '#16a34a' : '#2563eb' }}>
             <CheckCircle size={28} color="white" />
           </div>
-          <h1 className="auth-title">¡Sesión Iniciada!</h1>
+          <h1 className="auth-title">{t('walletConnect.sesionIniciada')}</h1>
           <p className="auth-subtitle">
-            Ingresando como <strong>{chosenRole === 'provider' ? '🩺 Proveedor / Vendedor' : '🛡️ Cliente / Paciente'}</strong>
+            {t('walletConnect.ingresandoComo', {
+              role: chosenRole === 'provider'
+                ? `🩺 ${t('walletConnect.proveedorVendedor')}`
+                : `🛡️ ${t('walletConnect.clientePaciente')}`
+            })}
           </p>
           
           <div style={{
@@ -107,7 +113,7 @@ export default function WalletConnect() {
             textAlign: 'left',
           }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>
-              Dirección Autenticada
+              {t('walletConnect.direccionAutenticada')}
             </div>
             <div style={{ 
               fontFamily: 'monospace', 
@@ -119,7 +125,7 @@ export default function WalletConnect() {
             }}>
               {walletAddress.slice(0, 10)}...{walletAddress.slice(-8)}
               <a 
-                href={`https://polygonscan.com/address/${walletAddress}`} 
+                href={`https://sepolia.etherscan.io/address/${walletAddress}`} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 style={{ display: 'inline-flex', alignItems: 'center', color: 'inherit' }}
@@ -130,7 +136,7 @@ export default function WalletConnect() {
           </div>
 
           <button className="auth-btn" onClick={handleContinue} style={{ background: chosenRole === 'provider' ? '#16a34a' : 'var(--primary)' }}>
-            Entrar a Mi Dashboard <ArrowRight size={18} />
+            {t('walletConnect.entrarDashboard')} <ArrowRight size={18} />
           </button>
           
           <p className="auth-footer" style={{ marginTop: 16 }}>
@@ -138,7 +144,7 @@ export default function WalletConnect() {
               e.preventDefault();
               signOut();
               setStep(0);
-            }}>Cerrar Sesión</a>
+            }}>{t('walletConnect.cerrarSesion')}</a>
           </p>
         </div>
       </div>
@@ -154,9 +160,9 @@ export default function WalletConnect() {
             <UserCheck size={28} color="white" />
           </div>
 
-          <h1 className="auth-title">¿Cómo deseas ingresar?</h1>
+          <h1 className="auth-title">{t('walletConnect.comoDeseasIngresar')}</h1>
           <p className="auth-subtitle">
-            Selecciona el tipo de cuenta con el que deseas acceder a NoPayForNothing.
+            {t('walletConnect.seleccionaTipo')}
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, margin: '24px 0' }}>
@@ -181,10 +187,10 @@ export default function WalletConnect() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: '1.0625rem', color: chosenRole === 'customer' ? '#2563eb' : 'inherit' }}>
-                  Soy Cliente / Paciente
+                  {t('walletConnect.soyCliente')}
                 </div>
                 <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
-                  Quiero contratar garantías de servicios (mecánicos, doctores, dentistas, etc.), gestionar mis suscripciones y radicar reclamos.
+                  {t('walletConnect.clienteDesc')}
                 </div>
               </div>
             </div>
@@ -210,17 +216,17 @@ export default function WalletConnect() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: '1.0625rem', color: chosenRole === 'provider' ? '#16a34a' : 'inherit' }}>
-                  Soy Proveedor / Vendedor de Servicios
+                  {t('walletConnect.soyProveedor')}
                 </div>
                 <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
-                  Soy doctor, mecánico, dentista o profesional. Quiero ofrecer garantías, crear planes de servicio y gestionar a mis pacientes/clientes.
+                  {t('walletConnect.proveedorDesc')}
                 </div>
               </div>
             </div>
           </div>
 
           <button className="auth-btn" onClick={handleConfirmRole} style={{ background: chosenRole === 'provider' ? '#16a34a' : 'var(--primary)' }}>
-            Continuar como {chosenRole === 'provider' ? 'Proveedor' : 'Cliente'} <ArrowRight size={18} />
+            {t('walletConnect.continuarComo', { role: chosenRole === 'provider' ? t('walletConnect.proveedorVendedor') : t('walletConnect.clientePaciente') })} <ArrowRight size={18} />
           </button>
         </div>
       </div>
@@ -249,13 +255,13 @@ export default function WalletConnect() {
         </div>
 
         <h1 className="auth-title">
-          {step === 0 && 'Conectar Billetera'}
-          {step === 1 && 'Conectando y Firmando...'}
+          {step === 0 && t('walletConnect.conectarBilletera')}
+          {step === 1 && t('walletConnect.conectandoFirmando')}
         </h1>
         
         <p className="auth-subtitle">
-          {step === 0 && 'Elige tu billetera para acceder a tus garantías en NoPayForNothing'}
-          {step === 1 && `Por favor aprueba la firma de autenticación (SIWE) en ${selectedWallet}...`}
+          {step === 0 && t('walletConnect.eligeBilletera')}
+          {step === 1 && t('walletConnect.apruebaFirma', { wallet: selectedWallet })}
         </p>
 
         {error && (
@@ -321,19 +327,19 @@ export default function WalletConnect() {
               borderRadius: '50%',
             }} />
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-              Firma el mensaje criptográfico en tu billetera para verificar tu identidad...
+              {t('walletConnect.firmaMensaje')}
             </p>
           </div>
         )}
 
         <div className="auth-note">
-          <strong>Seguridad:</strong> NoPayForNothing nunca solicita ni almacena tus claves privadas.
+          <strong>{t('walletConnect.seguridad')}</strong> {t('walletConnect.noSolicitaClaves')}
         </div>
 
         <p className="auth-footer">
-          ¿Nuevo en Web3?{' '}
+          {t('walletConnect.nuevoEnWeb3')}{' '}
           <a href="https://metamask.io" target="_blank" rel="noopener noreferrer">
-            Descargar MetaMask
+            {t('walletConnect.descargarMetaMask')}
           </a>
         </p>
       </div>

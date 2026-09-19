@@ -173,6 +173,21 @@ class ApiClient {
       method: 'PUT',
     });
   }
+
+  async getLockDetails(lockAddress: string) {
+    return this.request<any>(`/api/v1/locks/${lockAddress}`);
+  }
+
+  async getLockKeys(lockAddress: string) {
+    return this.request<any[]>(`/api/v1/locks/${lockAddress}/keys`);
+  }
+
+  async linkServiceToLock(serviceId: string, lockAddress: string, networkId = 11155111) {
+    return this.request<any>(`/api/v1/locks/${serviceId}/link`, {
+      method: 'PUT',
+      body: JSON.stringify({ lock_address: lockAddress, network_id: networkId }),
+    });
+  }
 }
 
 export const api = new ApiClient();

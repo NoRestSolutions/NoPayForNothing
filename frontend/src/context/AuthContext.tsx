@@ -24,7 +24,7 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const POLYGON_CHAIN_ID = 137;
+const SEPOLIA_CHAIN_ID = 11155111;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [walletAddress, setWalletAddress] = useState<string | null>(() => localStorage.getItem('wallet_address'));
@@ -131,7 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         `${statement}\n\n` +
         `URI: ${origin}\n` +
         `Version: 1\n` +
-        `Chain ID: ${POLYGON_CHAIN_ID}\n` +
+        `Chain ID: ${SEPOLIA_CHAIN_ID}\n` +
         `Nonce: ${nonce}\n` +
         `Issued At: ${issuedAt}`;
 

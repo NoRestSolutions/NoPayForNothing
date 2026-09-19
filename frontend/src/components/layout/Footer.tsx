@@ -1,34 +1,37 @@
 import { Link } from 'react-router-dom';
 import { Wallet } from 'lucide-react';
-
-const footerLinks = {
-  product: [
-    { label: 'Features', to: '/#features' },
-    { label: 'Services', to: '/services' },
-    { label: 'Dashboard', to: '/dashboard' },
-    { label: 'Documentation', to: '#' },
-  ],
-  resources: [
-    { label: 'Documentation', to: '#' },
-    { label: 'Guides', to: '#' },
-    { label: 'Integrations', to: '#' },
-    { label: 'API Reference', to: '#' },
-  ],
-  community: [
-    { label: 'Blog', to: '#' },
-    { label: 'Discord', to: '#' },
-    { label: 'Twitter', to: '#' },
-    { label: 'GitHub', to: '#' },
-  ],
-  company: [
-    { label: 'About', to: '#' },
-    { label: 'Roadmap', to: '#' },
-    { label: 'Privacy Policy', to: '#' },
-    { label: 'Terms of Service', to: '#' },
-  ],
-};
+import { useTranslation } from 'react-i18next';
 
 export default function Footer() {
+  const { t } = useTranslation();
+
+  const footerLinks = {
+    product: [
+      { label: t('footer.features'), to: '/#features' },
+      { label: t('footer.services'), to: '/services' },
+      { label: t('footer.dashboard'), to: '/dashboard' },
+      { label: t('footer.documentation'), to: '#' },
+    ],
+    resources: [
+      { label: t('footer.documentation'), to: '#' },
+      { label: t('footer.guides'), to: '#' },
+      { label: t('footer.integrations'), to: '#' },
+      { label: t('footer.apiReference'), to: '#' },
+    ],
+    community: [
+      { label: t('footer.blog'), to: '#' },
+      { label: t('footer.discord'), to: '#' },
+      { label: t('footer.twitter'), to: '#' },
+      { label: t('footer.github'), to: '#' },
+    ],
+    company: [
+      { label: t('footer.about'), to: '#' },
+      { label: t('footer.roadmap'), to: '#' },
+      { label: t('footer.privacyPolicy'), to: '#' },
+      { label: t('footer.termsOfService'), to: '#' },
+    ],
+  };
+
   return (
     <footer className="footer">
       <div className="footer-grid">
@@ -50,8 +53,7 @@ export default function Footer() {
             </div>
           </Link>
           <p className="footer-description">
-            Blockchain-backed service guarantees powered by Unlock Protocol. 
-            Subscribe to services with transparency and trust.
+            {t('footer.descripcion')}
           </p>
           <div className="footer-social">
             <a href="#" className="social-icon" aria-label="GitHub">
@@ -73,7 +75,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-column">
-          <h4>Product</h4>
+          <h4>{t('footer.producto')}</h4>
           <ul className="footer-links">
             {footerLinks.product.map((link) => (
               <li key={link.label}>
@@ -84,7 +86,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-column">
-          <h4>Resources</h4>
+          <h4>{t('footer.recursos')}</h4>
           <ul className="footer-links">
             {footerLinks.resources.map((link) => (
               <li key={link.label}>
@@ -95,7 +97,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-column">
-          <h4>Community</h4>
+          <h4>{t('footer.comunidad')}</h4>
           <ul className="footer-links">
             {footerLinks.community.map((link) => (
               <li key={link.label}>
@@ -107,8 +109,8 @@ export default function Footer() {
       </div>
 
       <div className="footer-bottom">
-        <span>NoPayForNothing - Powered by Unlock Protocol</span>
-        <span>&copy; {new Date().getFullYear()} All rights reserved</span>
+        <span>{t('footer.poweredBy')}</span>
+        <span>&copy; {new Date().getFullYear()} {t('footer.allRights')}</span>
       </div>
     </footer>
   );

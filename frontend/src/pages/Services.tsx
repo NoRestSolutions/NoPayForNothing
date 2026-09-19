@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Users, ArrowRight, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { categories } from '../config/config';
 
@@ -17,6 +18,7 @@ interface ServiceItem {
 }
 
 export default function Services() {
+  const { t } = useTranslation();
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -53,10 +55,10 @@ export default function Services() {
       <section className="services-section">
         <div className="section-container">
           <div className="section-header">
-            <span className="section-badge">Catálogo Completo</span>
-            <h1 className="section-title">Servicios con Garantías Respaldadas</h1>
+            <span className="section-badge">{t('services.catalogoCompleto')}</span>
+            <h1 className="section-title">{t('services.serviciosConGarantia')}</h1>
             <p className="section-subtitle">
-              Encuentra planes de salud, talleres mecánicos, clínicas dentales y servicios profesionales asegurados en Polygon.
+              {t('services.encuentraPlanes')}
             </p>
           </div>
 
@@ -66,7 +68,7 @@ export default function Services() {
               <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
               <input 
                 type="text"
-                placeholder="Buscar por servicio, doctor, taller o especialidad..."
+                placeholder={t('services.buscarPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -86,7 +88,7 @@ export default function Services() {
                 className={`filter-tab ${activeCategory === 'all' ? 'active' : ''}`}
                 onClick={() => setActiveCategory('all')}
               >
-                Todos los Servicios
+                {t('services.todosLosServicios')}
               </button>
               {Object.entries(categories).map(([key, category]) => (
                 <button
@@ -103,13 +105,13 @@ export default function Services() {
           {loading ? (
             <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)' }}>
               <div className="animate-spin" style={{ width: 40, height: 40, border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', margin: '0 auto 16px' }} />
-              Cargando servicios disponibles...
+              {t('services.cargando')}
             </div>
           ) : filteredServices.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
-              <p style={{ fontSize: '1.125rem', marginBottom: 8 }}>No se encontraron servicios que coincidan con la búsqueda.</p>
+              <p style={{ fontSize: '1.125rem', marginBottom: 8 }}>{t('services.noEncontrados')}</p>
               <button onClick={() => { setActiveCategory('all'); setSearchQuery(''); }} className="btn-secondary">
-                Restablecer filtros
+                {t('services.restablecerFiltros')}
               </button>
             </div>
           ) : (
@@ -144,11 +146,11 @@ export default function Services() {
                     <div>
                       <div className="service-pricing" style={{ margin: '16px 0' }}>
                         <div>
-                          <div className="price-label">Mensualidad</div>
-                          <div className="price-value">${service.price_usd} USD</div>
+                          <div className="price-label">{t('services.mensualidad')}</div>
+                          <div className="price-value">${service.price_usd} ETH</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div className="coverage-label">Cobertura Máx</div>
+                          <div className="coverage-label">{t('services.coberturaMax')}</div>
                           <div className="coverage-value" style={{ color: '#00b35e' }}>
                             ${service.coverage_amount?.toLocaleString()} USD
                           </div>
@@ -157,15 +159,15 @@ export default function Services() {
 
                       <div className="service-meta" style={{ marginBottom: 16 }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Shield size={14} color="#00b35e" /> Garantizado
+                          <Shield size={14} color="#00b35e" /> {t('services.garantizado')}
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Users size={14} /> {service.provider_name || 'Proveedor Verificado'}
+                          <Users size={14} /> {service.provider_name || t('landing.proveedorVerificado')}
                         </span>
                       </div>
 
                       <div className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '10px 0' }}>
-                        Ver Garantía y Contratar <ArrowRight size={16} />
+                        {t('services.verGarantia')} <ArrowRight size={16} />
                       </div>
                     </div>
                   </Link>

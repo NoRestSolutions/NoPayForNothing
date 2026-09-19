@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   Shield, Zap, ArrowRight, 
   Link2, CreditCard, FileCheck, Clock,
@@ -21,43 +22,44 @@ interface ServiceItem {
   active_members?: number;
 }
 
-const features = [
-  {
-    icon: Link2,
-    title: 'Garantías en Blockchain',
-    description: 'Cada contrato de garantía queda registrado en la red Polygon de forma inmutable y transparente.',
-  },
-  {
-    icon: CreditCard,
-    title: 'Suscripciones Automatizadas',
-    description: 'Membresías periódicas seguras. Sin cobros sorpresa y con cancelación en un solo clic.',
-  },
-  {
-    icon: Shield,
-    title: 'Sin Intermediarios Abusivos',
-    description: 'Los fondos y coberturas se gestionan mediante contratos inteligentes de Unlock Protocol.',
-  },
-  {
-    icon: FileCheck,
-    title: 'Sistema Directo de Reclamos',
-    description: 'Radica reclamos de garantía con evidencias y recibe resoluciones justas y verificables.',
-  },
-  {
-    icon: Clock,
-    title: 'Cobertura Inmediata',
-    description: 'Tu garantía entra en vigencia de inmediato al firmar con tu billetera Web3.',
-  },
-  {
-    icon: Zap,
-    title: 'Para Médicos, Mecánicos y Más',
-    description: 'Plataforma abierta para doctores, clínicas, talleres mecánicos, plomeros y consultores.',
-  },
-];
-
 export default function Landing() {
+  const { t } = useTranslation();
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
+
+  const features = [
+    {
+      icon: Link2,
+      title: t('landing.feature1Title'),
+      description: t('landing.feature1Desc'),
+    },
+    {
+      icon: CreditCard,
+      title: t('landing.feature2Title'),
+      description: t('landing.feature2Desc'),
+    },
+    {
+      icon: Shield,
+      title: t('landing.feature3Title'),
+      description: t('landing.feature3Desc'),
+    },
+    {
+      icon: FileCheck,
+      title: t('landing.feature4Title'),
+      description: t('landing.feature4Desc'),
+    },
+    {
+      icon: Clock,
+      title: t('landing.feature5Title'),
+      description: t('landing.feature5Desc'),
+    },
+    {
+      icon: Zap,
+      title: t('landing.feature6Title'),
+      description: t('landing.feature6Desc'),
+    },
+  ];
 
   useEffect(() => {
     api.getServices(1, 12)
@@ -84,21 +86,20 @@ export default function Landing() {
         <div className="hero-container">
           <div className="hero-content">
             <div className="hero-badge">
-              <Zap size={14} /> Respaldado en Polygon Blockchain
+              <Zap size={14} /> {t('landing.badge')}
             </div>
             <h1 className="hero-title">
-              Garantías de servicios en las que <span className="highlight">sí puedes confiar</span>
+              {t('landing.heroTitle1')} <span className="highlight">{t('landing.heroHighlight')}</span>
             </h1>
             <p className="hero-subtitle">
-              Suscríbete a servicios de mecánicos, médicos, dentistas y más con garantías auditables en blockchain. 
-              Sin cláusulas ocultas ni promesas rotas: compromisos transparentes ejecutados por código.
+              {t('landing.heroSubtitle')}
             </p>
             <div className="hero-buttons">
               <a href="#services-catalog" className="btn-primary">
-                Ver Todos los Servicios <ArrowRight size={18} />
+                {t('landing.verServicios')} <ArrowRight size={18} />
               </a>
               <Link to="/wallet-connect" className="btn-secondary">
-                Conectar Billetera (MetaMask)
+                {t('landing.conectarBilletera')}
               </Link>
             </div>
           </div>
@@ -125,7 +126,7 @@ export default function Landing() {
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 4 }}>
-                    Garantía Blockchain Activa
+                    {t('landing.garantiaActiva')}
                   </div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                     AutoCare Pro & MediCare Plus
@@ -145,7 +146,7 @@ export default function Landing() {
                     fontWeight: 600,
                     color: '#00b35e',
                   }}>
-                    ✓ Cobertura Verificada
+                    ✓ {t('landing.coberturaVerificada')}
                   </div>
                   <div style={{
                     padding: '6px 14px',
@@ -155,7 +156,7 @@ export default function Landing() {
                     fontWeight: 600,
                     color: 'var(--primary)',
                   }}>
-                    Polygon (137)
+                    Sepolia (11155111)
                   </div>
                 </div>
               </div>
@@ -168,10 +169,10 @@ export default function Landing() {
       <section style={{ padding: '60px 0', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
         <div className="section-container">
           <div className="section-header">
-            <span className="section-badge">Dos Modos de Uso</span>
-            <h2 className="section-title">Diseñado para Clientes y Prestadores de Servicios</h2>
+            <span className="section-badge">{t('landing.dosModos')}</span>
+            <h2 className="section-title">{t('landing.disenadoPara')}</h2>
             <p className="section-subtitle">
-              Elige tu perfil al conectar tu billetera y accede a tu panel especializado.
+              {t('landing.eligePerfil')}
             </p>
           </div>
 
@@ -181,23 +182,23 @@ export default function Landing() {
               <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                 <Shield size={26} />
               </div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 12 }}>Para Clientes / Pacientes</h3>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 12 }}>{t('landing.paraClientes')}</h3>
               <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20 }}>
-                Contrata servicios garantizados para tu vehículo, salud o negocio. Administra tus pagos mensuales, visualiza tus coberturas y radica reclamos si el servicio no cumple lo prometido.
+                {t('landing.clientesDesc')}
               </p>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px 0', display: 'flex', flexDirection: 'column', gap: 10, fontSize: '0.875rem' }}>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle size={16} color="#00b35e" /> Cobertura garantizada en USD
+                  <CheckCircle size={16} color="#00b35e" /> {t('landing.coberturaUSD')}
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle size={16} color="#00b35e" /> Radicación de reclamos con evidencias
+                  <CheckCircle size={16} color="#00b35e" /> {t('landing.radicacionReclamos')}
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle size={16} color="#00b35e" /> Cancelación libre en cualquier momento
+                  <CheckCircle size={16} color="#00b35e" /> {t('landing.cancelacionLibre')}
                 </li>
               </ul>
               <Link to="/services" className="btn-secondary" style={{ width: '100%', justifyContent: 'center', borderColor: '#2563eb', color: '#2563eb' }}>
-                Explorar Garantías Disponibles
+                {t('landing.explorarGarantias')}
               </Link>
             </div>
 
@@ -206,23 +207,23 @@ export default function Landing() {
               <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(22, 163, 74, 0.1)', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                 <Briefcase size={26} />
               </div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 12 }}>Para Proveedores / Vendedores</h3>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 12 }}>{t('landing.paraProveedores')}</h3>
               <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20 }}>
-                Eres médico, mecánico, dentista o profesional. Ofrece planes de garantía recurrentes a tus clientes para fidelizarlos, asegurar ingresos mensuales y gestionar reclamos con total transparencia.
+                {t('landing.proveedoresDesc')}
               </p>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px 0', display: 'flex', flexDirection: 'column', gap: 10, fontSize: '0.875rem' }}>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle size={16} color="#16a34a" /> Publicación de planes de servicio ilimitados
+                  <CheckCircle size={16} color="#16a34a" /> {t('landing.publicacionPlanes')}
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle size={16} color="#16a34a" /> Control de pacientes y clientes suscritos
+                  <CheckCircle size={16} color="#16a34a" /> {t('landing.controlPacientes')}
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle size={16} color="#16a34a" /> Panel de aprobación y revisión de reclamos
+                  <CheckCircle size={16} color="#16a34a" /> {t('landing.panelReclamos')}
                 </li>
               </ul>
               <Link to="/wallet-connect" className="btn-secondary" style={{ width: '100%', justifyContent: 'center', borderColor: '#16a34a', color: '#16a34a' }}>
-                Acceder como Proveedor
+                {t('landing.accederProveedor')}
               </Link>
             </div>
           </div>
@@ -233,10 +234,10 @@ export default function Landing() {
       <section className="services-section" id="services-catalog">
         <div className="section-container">
           <div className="section-header">
-            <span className="section-badge">Catálogo Oficial</span>
-            <h2 className="section-title">Servicios y Garantías Disponibles</h2>
+            <span className="section-badge">{t('landing.catalogoOficial')}</span>
+            <h2 className="section-title">{t('landing.serviciosDisponibles')}</h2>
             <p className="section-subtitle">
-              Explora y contrata garantías respaldadas en Polygon ofrecidas por profesionales verificados.
+              {t('landing.explorarGarantiasDesc')}
             </p>
           </div>
 
@@ -247,7 +248,7 @@ export default function Landing() {
                 className={`filter-tab ${activeCategory === 'all' ? 'active' : ''}`}
                 onClick={() => setActiveCategory('all')}
               >
-                Todos los Servicios ({services.length})
+                {t('landing.todosLosServicios')} ({services.length})
               </button>
               {Object.entries(categories).map(([key, category]) => (
                 <button
@@ -264,7 +265,7 @@ export default function Landing() {
           {loadingServices ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
               <div className="animate-spin" style={{ width: 36, height: 36, border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', margin: '0 auto 16px' }} />
-              Cargando catálogo desde el backend...
+              {t('services.cargando')}
             </div>
           ) : filteredServices.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
@@ -297,11 +298,11 @@ export default function Landing() {
                     <div>
                       <div className="service-pricing" style={{ margin: '16px 0' }}>
                         <div>
-                          <div className="price-label">Suscripción Mensual</div>
-                          <div className="price-value">${service.price_usd} USD</div>
+                          <div className="price-label">{t('landing.suscripcionMensual')}</div>
+                          <div className="price-value">${service.price_usd} ETH</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div className="coverage-label">Garantía Máxima</div>
+                          <div className="coverage-label">{t('landing.garantiaMaxima')}</div>
                           <div className="coverage-value" style={{ color: '#00b35e' }}>
                             ${service.coverage_amount?.toLocaleString()} USD
                           </div>
@@ -310,10 +311,10 @@ export default function Landing() {
 
                       <div className="service-meta" style={{ marginBottom: 16 }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Shield size={14} color="#00b35e" /> Smart Contract
+                          <Shield size={14} color="#00b35e" /> {t('landing.smartContract')}
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Users size={14} /> {service.provider_name || 'Proveedor Verificado'}
+                          <Users size={14} /> {service.provider_name || t('landing.proveedorVerificado')}
                         </span>
                       </div>
 
@@ -322,7 +323,7 @@ export default function Landing() {
                         className="btn-primary" 
                         style={{ width: '100%', justifyContent: 'center', padding: '10px 0' }}
                       >
-                        Ver Detalles y Contratar <ArrowRight size={16} />
+                        {t('landing.verDetalles')} <ArrowRight size={16} />
                       </Link>
                     </div>
                   </div>
@@ -333,7 +334,7 @@ export default function Landing() {
 
           <div style={{ textAlign: 'center', marginTop: 40 }}>
             <Link to="/services" className="btn-secondary">
-              Ver Catálogo Completo y Filtros Avanzados →
+              {t('landing.verCatalogoCompleto')}
             </Link>
           </div>
         </div>
@@ -343,10 +344,10 @@ export default function Landing() {
       <section className="features-section" id="features">
         <div className="section-container">
           <div className="section-header">
-            <span className="section-badge">Beneficios</span>
-            <h2 className="section-title">Por qué NoPayForNothing es diferente</h2>
+            <span className="section-badge">{t('landing.beneficios')}</span>
+            <h2 className="section-title">{t('landing.porQueDiferente')}</h2>
             <p className="section-subtitle">
-              Un estándar abierto que protege a los clientes y respalda a los mejores profesionales.
+              {t('landing.estandarAbierto')}
             </p>
           </div>
           <div className="features-grid">
@@ -367,10 +368,10 @@ export default function Landing() {
       <section className="stats-section">
         <div className="section-container">
           <div className="stats-grid">
-            <AnimatedCounter value={5000} suffix="+" label="Garantías Aseguradas" />
-            <AnimatedCounter value={99} suffix="%" label="Resolución de Reclamos" />
-            <AnimatedCounter value={350} prefix="$" suffix="K+" label="Monto Protegido" />
-            <AnimatedCounter value={180} suffix="+" label="Proveedores Activos" />
+            <AnimatedCounter value={5000} suffix="+" label={t('landing.garantiasAseguradas')} />
+            <AnimatedCounter value={99} suffix="%" label={t('landing.resolucionReclamos')} />
+            <AnimatedCounter value={350} prefix="$" suffix="K+" label={t('landing.montoProtegido')} />
+            <AnimatedCounter value={180} suffix="+" label={t('landing.proveedoresActivos')} />
           </div>
         </div>
       </section>
